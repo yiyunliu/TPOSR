@@ -17,7 +17,7 @@ Reserved Notation "Γ ⊢ a ▻+ b ∈  A" (at level 70, no associativity).
 Reserved Notation "⊢ Γ" (at level 70, no associativity).
 
 Inductive WtRed : context -> tm -> tm -> tm -> Prop :=
-| WR_var Γ n A :
+| WR_Var Γ n A :
   ⊢ Γ ->
   lookup n Γ A ->
   (* ------------- *)
