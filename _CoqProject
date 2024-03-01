@@ -1,0 +1,6 @@
+-R . WR 
+axioms.v
+imports.v
+syntax.v
+typing.v
+unscoped.v
