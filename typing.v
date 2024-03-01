@@ -118,3 +118,10 @@ where
 
 Lemma Equiv_sym Γ A B (h : Γ ⊢ A ≡ B) : Γ ⊢ B ≡ A.
 Proof. elim : A B / h; eauto with wt. Qed.
+
+Scheme red_ind := Induction for WtRed Sort Prop
+    with reds_ind := Induction for WtReds Sort Prop
+    with wf_ind := Induction for Wf Sort Prop.
+
+Combined Scheme wt_mutual_ind from red_ind, reds_ind, wf_ind.
+Combined Scheme wt_mutual_ind' from red_ind, reds_ind.
