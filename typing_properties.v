@@ -424,8 +424,6 @@ Proof.
   - hauto lq:on rew:off db:wt.
 Qed.
 
-#[export]Hint Resolve Univ_inv Var_inv Prod_inv Lam_inv App_inv : wrinv.
-
 Lemma exchange : forall Γ M N A P B,
     Γ ⊢ M ▻ N ∈ A -> Γ ⊢ M ▻ P ∈ B -> Γ ⊢ M ▻ N ∈ B.
 Proof.
@@ -539,6 +537,38 @@ Proof.
     apply : WRs_Trans; last by exact ih.
     qauto l:on use:lh_refl_mutual db:wt.
 Qed.
+
+Lemma App_cong Γ A A' i B B' M M' N N' :
+  Γ ⊢ A ▻+ A' ∈ Univ i ->
+  A :: Γ ⊢ B ▻+ B' ∈ Univ i ->
+  Γ ⊢ M ▻+ M' ∈ Pi A B ->
+  Γ ⊢ N ▻+ N' ∈ A ->
+  Γ ⊢ App A B M N ▻+ App A' B' M' N' ∈ B[N..].
+Proof.
+Admitted.
+
+Lemma Prod_multi_inv Γ A B N T :
+  Γ ⊢ Pi A B ▻+ N ∈ T ->
+  exists A' B' i,
+    N = Pi A' B' /\ Γ ⊢ A ▻+ A' ∈ Univ i /\ A :: Γ ⊢ B ▻+ B' ∈ Univ i  /\ Γ ⊢ T ≡ Univ i.
+Proof.
+Admitted.
+
+Lemma Lam_multi_inv Γ A M N T
+  (h : Γ ⊢ Lam A M ▻+ N ∈ T) :
+  exists A' M' B i,
+    N = Lam A' M' /\
+    Γ ⊢ A ▻+ A' ∈ Univ i /\
+    A::Γ ⊢ B ▻ B ∈ Univ i /\
+    A::Γ ⊢ M ▻+ M' ∈ B /\
+    Γ ⊢ T ≡ Pi A B.
+Proof.
+Admitted.
+
+Lemma Univ_multi_inv Γ i N T (h : Γ ⊢ Univ i ▻+ N ∈ T) :
+  N = Univ i /\ Γ ⊢ T ≡ Univ (S i).
+Proof.
+Admitted.
 
 Lemma regularity Γ M N A
   (h : Γ ⊢ M ▻ N ∈ A) :
