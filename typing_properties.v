@@ -315,4 +315,9 @@ Proof.
     eauto using Ctx_conv with wt.
     apply : WE_Exp.
     apply /WR_cong : hB hN.
-  - move => Γ A i A' A0 B M M' N N' hA ihA.
+  - move => Γ A i A' A0 B M M' N N' hA ihA hA' ihA' hA00 ihA00 hA01 ihA01 hB _ hM ihM hN ihN.
+    apply : WR_Conv.
+    apply : WR_cong; eauto.
+    apply : WE_Exp.
+    apply /WR_cong : hB hN.
+Qed.
