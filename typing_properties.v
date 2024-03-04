@@ -453,3 +453,17 @@ Proof.
     apply : WR_Conv'; eauto.
     hauto lq:on db:wt.
 Qed.
+
+Lemma exchange_multi_step : forall Γ M N P A B,
+  Γ ⊢ M ▻+ N ∈ A -> Γ ⊢ M ▻ P ∈ B -> Γ ⊢ M ▻+ N ∈ B.
+Proof.
+  move => Γ M N + A + h.
+  elim : Γ M N A / h.
+  - hauto lq:on use:exchange db:wt.
+  - move => Γ M N P A h0 h1 ih P0 B h2.
+    move => [:h3].
+    apply : WRs_Trans.
+    abstract : h3;  apply /exchange :h0 h2.
+    move /(proj1 rh_refl_mutual) in h3.
+    eauto.
+Qed.
