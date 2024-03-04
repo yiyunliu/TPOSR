@@ -118,31 +118,116 @@ Proof.
     by asimpl.
 Qed.
 
+Lemma equiv_renaming Γ A B (h : Γ ⊢ A ≡ B) :
+  forall ξ Δ, lookup_good_renaming ξ Γ Δ -> ⊢ Δ -> Δ ⊢ A⟨ξ⟩ ≡ B⟨ξ⟩.
+Proof.
+  elim : A B / h; hauto q:on ctrs:WtEquiv use:wt_renaming_mutual.
+Qed.
+
+Lemma wr_morphing :
+  forall Γ a b A, Γ ⊢ a ▻ b ∈ A -> forall ρ Δ,
+        lookup_good_morphing ρ Γ Δ -> Wf Δ -> Δ ⊢ a[ρ] ▻ b[ρ] ∈ A[ρ].
+Proof. apply wt_morphing_mutual. Qed.
+
+Lemma wrs_Equiv Γ A B i (h : Γ ⊢ A ▻+ B ∈ Univ i) : Γ ⊢ A ≡ B.
+Proof.
+  move E : (Univ i) h => T h.
+  move : E.
+  elim : A B T / h;
+    hauto lq:on ctrs:WtEquiv.
+Qed.
+
+Lemma Conv_Equiv Γ A B C i :
+  Γ ⊢ A ▻+ B ∈ Univ i ->
+  Γ ⊢ A ▻+ C ∈ Univ i ->
+  Γ ⊢ B ≡ C.
+Proof.
+  move => /wrs_Equiv /Equiv_sym + /wrs_Equiv.
+  apply WE_Trans.
+Qed.
+
+Lemma Wt_Wf_mutual :
+  (forall Γ a b A, Γ ⊢ a ▻ b ∈ A -> ⊢ Γ ) /\
+  (forall Γ a b A, Γ ⊢ a ▻+ b ∈ A -> ⊢ Γ) /\
+  (forall Γ, ⊢ Γ -> True).
+Proof. apply wt_mutual_ind; eauto with wt. Qed.
+
+Lemma Wf_cons_inv A Γ :
+  ⊢ A :: Γ ->
+  ⊢ Γ /\ exists B i, Γ ⊢ A ▻ B ∈ Univ i.
+Proof. hauto l:on inv:Wf use:Wt_Wf_mutual. Qed.
+
+Lemma lookup_good_id A A' Γ
+  (h0 : ⊢ A' :: Γ)
+  (h : Γ ⊢ A' ≡ A) :
+  lookup_good_morphing var_tm (A :: Γ) (A' :: Γ).
+Proof.
+  move => k T.
+  elim /lookup_inv => _.
+  + move => ? ? ? []*. subst. asimpl.
+    apply WR_Conv with (A := A' ⟨↑⟩).
+    hauto q:on ctrs:WtRed, lookup.
+    apply : equiv_renaming=>//; last by apply lookup_good_renaming_shift. exact h.
+  + move => n A1 Γ0 B0 ? ? []*. subst.
+    asimpl.
+    change (var_tm (↑ n)) with ((var_tm n)⟨↑⟩).
+    eapply wt_renaming_mutual=>//; last by apply lookup_good_renaming_shift.
+    apply : WR_Var; eauto.
+    sfirstorder use:Wf_cons_inv.
+Qed.
+
+Lemma Ctx_conv A B Γ M N C (h : A :: Γ ⊢ M ▻ N ∈ C) (h1 : Γ ⊢ A ≡ B)
+  (h2 : ⊢ B :: Γ) :
+  B :: Γ ⊢ M ▻ N ∈ C.
+Proof.
+  move /wr_morphing /(_ var_tm) : h. asimpl. apply=>//.
+  apply lookup_good_id; eauto.
+  move : h1. apply Equiv_sym.
+Qed.
+
+Lemma left_hand_reflexivity_helper Γ A0 A i B :
+  Γ ⊢ A0 ▻+ A ∈ Univ i ->
+  A :: Γ ⊢ B ▻ B ∈ Univ i ->
+  Γ ⊢ Pi A0 B ▻+ Pi A B ∈ Univ i.
+Proof.
+  move E : (Univ i) => T h.
+  move : i E.
+  elim : Γ A0 A T / h.
+  - move => Γ A0 A ? h i ? hB; subst.
+    have ? : ⊢ A0 :: Γ by eauto with wt.
+    apply WRs_One.
+    apply : WR_Prod=>//.
+    apply : Ctx_conv; eauto with wt.
+  - move => Γ A A0 A1 T h0 h1 ih i ? h2. subst.
+    specialize ih with (1 := eq_refl).
+    move /ih : (h2) {ih}.
+    apply : WRs_Trans.
+    apply WR_Prod; eauto.
+    apply : Ctx_conv; eauto with wt.
+    hauto lq:on rew:off use:wrs_Equiv, Equiv_sym db:wt.
+Qed.
+
 Lemma left_hand_reflexivity_mutual :
   (forall Γ a b A, Γ ⊢ a ▻ b ∈ A -> Γ ⊢ a ▻ a ∈ A ) /\
   (forall Γ a b A, Γ ⊢ a ▻+ b ∈ A -> Γ ⊢ a ▻ a ∈ A ) /\
   (forall Γ, ⊢ Γ -> True).
 Proof.
   apply wt_mutual_ind=>//; eauto with wt.
-  move => Γ A i A' A0 B M M' N N' w H w0 H0 w1 H1 w2 H2 w3 H3 w4 H4 w5 H5.
-  apply : WR_App; eauto with wt.
-
-  apply : WR_Conv.
-  - apply : WR_Lam; eauto with wt.
-  - admit.
-  - apply : WR_Conv; eauto with wt.
-    admit.
-Admitted.
-
-
-
-
-
-Lemma equiv_renaming Γ A B (h : Γ ⊢ A ≡ B) :
-  forall ξ Δ, lookup_good_renaming ξ Γ Δ -> ⊢ Δ -> Δ ⊢ A⟨ξ⟩ ≡ B⟨ξ⟩.
-Proof.
-  elim : A B / h; hauto q:on ctrs:WtEquiv use:wt_renaming_mutual.
-
+  move => Γ A i A' A0 B M M' N N' h0 _  h1 _ hA00 ihA00 hA01 ihA01 hB ihB hM ihM hN ihN.
+  have hequiv : Γ ⊢ A' ≡ A by eauto using Conv_Equiv.
+  have /Equiv_sym hequiv_s := hequiv.
+  apply : WR_App; eauto 1 with wt.
+  - move => [:tr0].
+    move : ihB. move/wr_morphing /(_ var_tm). asimpl. apply; last by abstract : tr0; eauto with wt.
+    apply lookup_good_id; eauto.
+  - apply : WR_Conv.
+    + apply : WR_Lam; eauto.
+    + have : Γ ⊢ Pi A0 B ▻+ Pi A B ∈ Univ i by eauto using left_hand_reflexivity_helper.
+      move /Ctx_conv /(_ ltac:(sfirstorder) ltac:(hauto lq:on db:wt)) in hB.
+      have : Γ ⊢ Pi A0 B ▻+ Pi A' B ∈ Univ i by eauto using left_hand_reflexivity_helper.
+      move => /wrs_Equiv + /wrs_Equiv /Equiv_sym.
+      move /[swap]. apply WE_Trans.
+  - apply : WR_Conv; eauto.
 Qed.
 
 Definition lookup_good_morphing ρ0 ρ1 Γ Δ :=

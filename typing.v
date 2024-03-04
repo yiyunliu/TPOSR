@@ -32,7 +32,7 @@ Inductive WtRed : context -> tm -> tm -> tm -> Prop :=
   Γ ⊢ A ▻ A' ∈ Univ i ->
   A :: Γ ⊢ B ▻ B' ∈ Univ i ->
   (* ------------------- *)
-  Γ ⊢ Pi A B ▻ Pi A' B' ∈ Univ (S i)
+  Γ ⊢ Pi A B ▻ Pi A' B' ∈ Univ i
 
 | WR_Lam Γ A A' i B M M' :
   Γ ⊢ A ▻ A' ∈ Univ i ->
