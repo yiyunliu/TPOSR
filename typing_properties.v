@@ -321,3 +321,102 @@ Proof.
     apply : WE_Exp.
     apply /WR_cong : hB hN.
 Qed.
+
+Lemma lookup_wf Γ n A (h : ⊢ Γ) (h0 : lookup n Γ A) : exists i, Γ ⊢ A ▻ A ∈ Univ i.
+Proof.
+  move : h.
+  elim : n Γ A / h0.
+  - move => A Γ /Wf_cons_inv.
+    move => [h0][B][i]h1.
+    exists i.
+    move /(proj1 lh_refl_mutual) : (h1).
+    move/(proj1 wt_renaming_mutual).
+    apply. by apply lookup_good_renaming_shift.
+    by apply /Wf_cons : h1.
+  - move => n A Γ B h ih /Wf_cons_inv.
+    move => [/ih+][B0][i]h1.
+    move => [j]h2.
+    exists j.
+    move/(proj1 wt_renaming_mutual) : h2.
+    apply. by apply lookup_good_renaming_shift.
+    apply /Wf_cons : h1.
+Qed.
+
+Lemma Univ_inv Γ i N T (h : Γ ⊢ Univ i ▻ N ∈ T) :
+  N = Univ i /\ Γ ⊢ T ≡ Univ (S i).
+Proof.
+  move E : (Univ i) h => M h.
+  move : i E.
+  elim : Γ M N T / h=>//;hauto lq:on rew:off db:wt.
+Qed.
+
+Lemma Var_inv Γ n N T (h : Γ ⊢ var_tm n ▻ N ∈ T) :
+  N = var_tm n /\ exists A, lookup n Γ A /\ Γ ⊢ T ≡ A.
+Proof.
+  move E : (var_tm n) h => M h.
+  move : n E.
+  elim : Γ M N T / h=>//.
+  - hauto lq:on use:lookup_wf db:wt.
+  - hauto lq:on rew:off db:wt.
+  - hauto lq:on rew:off db:wt.
+Qed.
+
+Lemma Prod_inv Γ A B N T (h : Γ ⊢ Pi A B ▻ N ∈ T) :
+  exists A' B' i, Γ ⊢ A ▻ A' ∈ Univ i /\ A::Γ ⊢ B ▻ B' ∈ Univ i /\ Γ ⊢ T ≡ Univ i.
+Proof.
+  move E : (Pi A B) h => M h.
+  move : A B E.
+  elim : Γ M N T / h=>//.
+  - hauto lq:on use:Wt_Wf_mutual db:wt.
+  - hauto lq:on rew:off db:wt.
+  - hauto lq:on rew:off db:wt.
+Qed.
+
+Lemma Lam_inv Γ A M N T (h : Γ ⊢ Lam A M ▻ N ∈ T) :
+  exists A' M' B i,
+    N = Lam A' M' /\
+    Γ ⊢ A ▻ A' ∈ Univ i /\
+    A::Γ ⊢ B ▻ B ∈ Univ i /\
+    A::Γ ⊢ M ▻ M' ∈ B /\
+    Γ ⊢ T ≡ Pi A B.
+Proof.
+  move E : (Lam A M) h => M0 h.
+  move : A M E.
+  elim : Γ M0 N T / h=>//.
+  - hauto lq:on use:Wt_Wf_mutual db:wt.
+  - hauto lq:on rew:off db:wt.
+  - hauto lq:on rew:off db:wt.
+Qed.
+
+Lemma App_inv Γ P U B Q N T (h : Γ ⊢ App U B P Q ▻ N ∈ T) :
+  exists A A' B' Q' i,
+    Γ ⊢ A ▻ A' ∈ Univ i /\ A::Γ ⊢ B ▻B' ∈ Univ i /\ Γ ⊢ Q ▻ Q' ∈ A /\
+    Γ ⊢ T ≡ B[Q..] /\
+    (* App case *)
+    ((exists P', U = A /\ Γ ⊢ P ▻ P' ∈ Pi A B /\ N = App A' B' P' Q') \/
+    (* Beta case *)
+     (exists A0 A'' R R', U = A''/\ P = Lam A R /\ A::Γ ⊢ R ▻ R' ∈ B /\ N = R'[Q'..] /\
+                         Γ ⊢ A0 ▻+ A'' ∈ Univ i /\ Γ ⊢ A0 ▻+ A ∈ Univ i)).
+Proof.
+  move E : (App U B P Q) h => M h.
+  move : U B P Q E.
+  elim : Γ M N T / h=>//.
+  - move => Γ A A' i B B' M M' N N' hA _ hB _ hM _ hN _ >[]*. subst.
+    exists A, A', B', N', i.
+    repeat split => //.
+    (* Factor out the first bullet *)
+    + apply : WE_Red.
+      move /WR_cong: hB hN. repeat move/[apply].
+      apply /(proj1 lh_refl_mutual).
+    + sfirstorder.
+  - move => Γ A i A' A0 B M M' N N' hA _ hA' _ hA00 hA01 hB _ hM _ hN _ > []*.
+    subst. exists A, A, B, N', i.
+    repeat split => //.
+    (* Factor out the first bullet *)
+    + apply : WE_Red.
+      move /WR_cong: hB hN. repeat move/[apply].
+      apply /(proj1 lh_refl_mutual).
+    + hauto lq:on.
+  - hauto lq:on rew:off db:wt.
+  - hauto lq:on rew:off db:wt.
+Qed.
