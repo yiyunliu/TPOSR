@@ -12,6 +12,9 @@ Proof.
   move => + h. elim : A B / h; eauto with wt.
 Qed.
 
+Lemma WR_Conv' Γ a b A B : Γ ⊢ a ▻ b ∈ A -> Γ ⊢ B ≡ A -> Γ ⊢ a ▻ b ∈ B.
+Proof. move => > + /Equiv_sym; apply WR_Conv. Qed.
+
 Lemma good_renaming_up ξ Γ Δ A :
   lookup_good_renaming ξ Γ Δ ->
   lookup_good_renaming (upRen_tm_tm ξ)  (A :: Γ) (A⟨ξ⟩ :: Δ).
@@ -419,4 +422,34 @@ Proof.
     + hauto lq:on.
   - hauto lq:on rew:off db:wt.
   - hauto lq:on rew:off db:wt.
+Qed.
+
+#[export]Hint Resolve Univ_inv Var_inv Prod_inv Lam_inv App_inv : wrinv.
+
+Lemma exchange : forall Γ M N A P B,
+    Γ ⊢ M ▻ N ∈ A -> Γ ⊢ M ▻ P ∈ B -> Γ ⊢ M ▻ N ∈ B.
+Proof.
+  move => Γ M N A + + h.
+  elim : Γ M N A / h; eauto 2.
+  - hauto lq:on rew:off use:Var_inv.
+  - hauto l:on use:Univ_inv.
+  - move => Γ i A A' B B' hA ihA hB ihB P B0.
+    move /Prod_inv.
+    move => [A0][B1][i0][hA0][hB1]h.
+    apply : WR_Conv'; eauto.
+    hauto lq:on db:wt.
+  - move => Γ A A' i B M M' h ihA hB ihB hM ihM P B0 /Lam_inv.
+    move =>[A'0][M'0][B1][i0][?][?][?][?]?. subst.
+    apply : WR_Conv'; eauto.
+    move{i h hB}. eauto with wt.
+  - move => Γ A A' i B B' M M' N N' hA ihA hB ihB hM ihM hN ihN P B0 /App_inv.
+    move => [A0][A'0][B'0][Q'][i0][?][?][?][?]_.
+    apply : WR_Conv'; eauto.
+    hauto lq:on db:wt.
+  - move => Γ A i A' A0 B M M' N N' hA ihA hA' ihA' hA0 ihA0 hA0' ihA0' hM ihM hN ihN P B0 /App_inv.
+    (* Turns out the very cursed or condition isn't needed for either
+    of the App cases *)
+    move => [A1][A'0][B'][Q'][i0][?][?][?][?]_.
+    apply : WR_Conv'; eauto.
+    hauto lq:on db:wt.
 Qed.
