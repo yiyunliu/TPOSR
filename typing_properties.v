@@ -539,3 +539,25 @@ Proof.
     apply : WRs_Trans; last by exact ih.
     qauto l:on use:lh_refl_mutual db:wt.
 Qed.
+
+Lemma regularity Γ M N A
+  (h : Γ ⊢ M ▻ N ∈ A) :
+  exists i, Γ ⊢ A ▻ A ∈ Univ i.
+Proof.
+  elim : Γ M N A / h; eauto with wt.
+  - sfirstorder use:lookup_wf.
+  - qauto l:on use:lh_refl_mutual db:wt.
+  - move => Γ A A' i B B' M M' N N' hA
+             [i0 ihA] hB [i1 ihB] hM [i2 ihM] hN [i3 ihN].
+    move /Prod_inv : ihM.
+    move => [A'0][B'0][i4][?][?]?.
+    exists i4. change (Univ i4) with (Univ i4)[N..].
+    qauto l:on use:WR_cong, lh_refl_mutual, rh_refl_mutual db:wt.
+  - move => Γ A i A' A0 B M M' N N' hA [i0 ihA] hA' [i1 ihA']
+             hA0 hA0' hB [i2 ihB] hM [i3 ihM] hN [i4 ihN].
+    exists i3.
+    change (Univ i3) with (Univ i3)[N..].
+    qauto l:on use:WR_cong, lh_refl_mutual, rh_refl_mutual db:wt.
+  - hauto lq:on use:rh_refl_mutual.
+  - hauto lq:on use:lh_refl_mutual.
+Qed.
