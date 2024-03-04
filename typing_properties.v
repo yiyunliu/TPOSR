@@ -108,7 +108,7 @@ Proof.
   - hauto q:on db:wt.
   - hauto q:on use:good_morphing_up db:wt.
   - hauto q:on use:good_morphing_up db:wt.
-  - move => Γ A A' i B B' M M' N N' hA ihA hB ihB hM ihM hN ihN ρ Δ hρ hΔ /=.
+  - move => *.
     apply : WR_App'; eauto. by asimpl. qauto l:on use:good_morphing_up db:wt.
   - move => Γ A i A' A0 B M M' N N' hA ihA hA' ihA' hA00 ihA00 hA01 ihA01 hB ihB hM ihM hN ihN ρ Δ hρ hΔ /=.
     apply : WR_Beta'; eauto; cycle 1.
@@ -230,34 +230,56 @@ Proof.
   - apply : WR_Conv; eauto.
 Qed.
 
-Definition lookup_good_morphing ρ0 ρ1 Γ Δ :=
+Definition lookup_good_morphing2 ρ0 ρ1 Γ Δ :=
   forall n A, lookup n Γ A -> Δ ⊢ ρ0 n ▻ ρ1 n ∈ A[ρ0].
 
+Lemma good_morphing2_up ρ0 ρ1 A B k Γ Δ
+  (h : lookup_good_morphing2 ρ0 ρ1 Γ Δ) :
+  Δ ⊢ A[ρ0] ▻ B ∈ Univ k ->
+  lookup_good_morphing2 (up_tm_tm ρ0) (up_tm_tm ρ1) (A :: Γ) (A[ρ0] :: Δ).
+Proof.
+  rewrite /lookup_good_morphing => h1.
+  inversion 1=>*; subst.
+  - apply WR_Var => /=.
+    + eauto with wt.
+    + asimpl. apply : here'. by asimpl.
+  - asimpl. rewrite !subst_ren_factor.
+    eapply wt_renaming_mutual. hauto l:on unfold:lookup_good_morphing.
+    apply lookup_good_renaming_shift.
+    eauto with wt.
+Qed.
 
-Lemma wt_morphing_mutual :
+Lemma lookup_good_morphing2_lh_refl ρ0 ρ1 Γ Δ :
+  lookup_good_morphing2 ρ0 ρ1 Γ Δ ->
+  lookup_good_morphing2 ρ0 ρ0 Γ Δ.
+Proof.
+  hauto lq:on use:left_hand_reflexivity_mutual unfold:lookup_good_morphing2.
+Qed.
+
+Lemma wt_morphing2_mutual :
   (forall Γ a b A, Γ ⊢ a ▻ b ∈ A -> forall ρ0 ρ1 Δ,
-        lookup_good_morphing ρ0 ρ1 Γ Δ -> Wf Δ -> Δ ⊢ a[ρ0] ▻ a[ρ1] ∈ A[ρ0] ) /\
+        lookup_good_morphing2 ρ0 ρ1 Γ Δ -> Wf Δ -> Δ ⊢ a[ρ0] ▻ b[ρ1] ∈ A[ρ0] ) /\
   (forall Γ a b A, Γ ⊢ a ▻+ b ∈ A -> forall ρ0 ρ1 Δ,
-        lookup_good_morphing ρ0 ρ1 Γ Δ -> Wf Δ -> Δ ⊢ a[ρ0] ▻+ a[ρ1] ∈ A[ρ0] ) /\
-  (forall Γ, ⊢ Γ -> forall ρ0 ρ1 Δ, lookup_good_morphing ρ0 ρ1 Γ Δ -> Wf Δ -> lookup_good_morphing ρ0 ρ0 Γ Δ).
+        lookup_good_morphing2 ρ0 ρ1 Γ Δ -> Wf Δ -> Δ ⊢ a[ρ0] ▻+ b[ρ1] ∈ A[ρ0] ) /\
+  (forall Γ, ⊢ Γ -> True).
 Proof.
   apply wt_mutual_ind; eauto with wt.
-  8 : {
-    hauto q:on inv:lookup unfold:lookup_good_morphing.
-  }
-  8 : {
-    move => Γ A B i hA ihA ρ0 ρ1 Δ hρ hΔ.
-    rewrite /lookup_good_morphing => k A0.
-    elim /lookup_inv => h.
-    - move => > ? []*. subst.
-      rewrite /lookup_good_morphing in hρ.
-      move : h.
-      move /hρ.
-      asimpl.
-
-  }
-  - hauto l:on unfold:lookup_good_morphing db:wt.
-  - hauto q:on use:good_morphing_up db:wt.
-  - move => Γ A A' i B M M' hA ihA hB ihB hM ihM ρ0 ρ1 Δ hρ hΔ /=.
-    apply : WR_Lam; eauto with wt.
-    apply ihB. apply : good_morphing_up; auto.
+  - hauto q:on db:wt.
+  - hauto q:on use:good_morphing2_up db:wt.
+  - hauto q:on use:lookup_good_morphing2_lh_refl, good_morphing2_up db:wt.
+  - move => *.
+    apply : WR_App'; eauto. by asimpl. qauto l:on use:good_morphing2_up db:wt.
+  - move => Γ A i A' A0 B M M' N N' hA ihA hA' ihA' hA00 ihA00 hA01 ihA01 hB ihB hM ihM hN ihN ρ0 ρ1 Δ hρ hΔ /=.
+    apply WR_Beta' with (M' := M'[up_tm_tm ρ1]) (N' := N'[ρ1]) (A0 := A0[ρ0]) (i := i); eauto 3.
+    + by asimpl.
+    + by asimpl.
+    + qauto l:on db:wt use:left_hand_reflexivity_mutual.
+    + hauto lq:on rew:off db:wt use:left_hand_reflexivity_mutual.
+    + sfirstorder use:lookup_good_morphing2_lh_refl.
+    + sfirstorder use:lookup_good_morphing2_lh_refl.
+    + hauto lq:on use:good_morphing2_up, lookup_good_morphing2_lh_refl db:wt.
+    + hauto lq:on use:good_morphing2_up, lookup_good_morphing2_lh_refl db:wt.
+  - qauto l:on use:lookup_good_morphing2_lh_refl, WR_Conv db:wt.
+  - qauto l:on use:lookup_good_morphing2_lh_refl, WR_Conv db:wt.
+  - eauto using lookup_good_morphing2_lh_refl with wt.
+Qed.
