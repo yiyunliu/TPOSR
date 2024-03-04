@@ -467,3 +467,75 @@ Proof.
     move /(proj1 rh_refl_mutual) in h3.
     eauto.
 Qed.
+
+Lemma Prod_cong_stage0 Γ A0 A i B :
+  Γ ⊢ A0 ▻+ A ∈ Univ i ->
+  A0 :: Γ ⊢ B ▻ B ∈ Univ i ->
+  Γ ⊢ Pi A0 B ▻+ Pi A B ∈ Univ i.
+Proof.
+  move => h h1.
+  suff : A :: Γ ⊢ B ▻ B ∈ Univ i by sfirstorder use:lh_refl_helper.
+  apply Ctx_conv with (A := A0); eauto with wt.
+  apply /wrs_Equiv : h.
+  hauto lq:on use:rh_refl_mutual db:wt.
+Qed.
+
+Lemma Prod_cong Γ A A' B B' i :
+  Γ ⊢ A ▻+ A' ∈ Univ i ->
+  A :: Γ ⊢ B ▻+ B' ∈ Univ i ->
+  Γ ⊢ Pi A B ▻+ Pi A' B' ∈ Univ i.
+Proof.
+  move E : (A :: Γ) => Δ.
+  move E0 : (Univ i) => T + h.
+  move : A Γ i E E0.
+  elim : Δ B B' T / h.
+  - move => Γ M N A h A0 Γ0 i ? ? h1. subst.
+    have : Γ0 ⊢ Pi A0 M ▻ Pi A0 N ∈ Univ i by
+      hauto lq:on use:lh_refl_mutual db:wt.
+    move / WRs_Trans. apply.
+    apply Prod_cong_stage0; eauto. sfirstorder use:rh_refl_mutual.
+  - move => Γ M N P A hM hN ih A0 Γ0 i ? ? h. subst.
+    specialize ih with (1 := eq_refl) (2 := eq_refl) (3 := h).
+    move /WRs_Trans : ih. apply.
+    hauto lq:on use:lh_refl_mutual db:wt.
+Qed.
+
+Lemma Lam_cong Γ A A' M M' B C i :
+  Γ ⊢ A ▻+ A' ∈ Univ i ->
+  A :: Γ ⊢ M ▻+ M' ∈ B ->
+  A :: Γ ⊢ B ▻ C ∈ Univ i ->
+  Γ ⊢ Lam A M ▻+ Lam A' M' ∈ Pi A B.
+Proof.
+  move E : (A :: Γ) => Δ + h.
+  move : A Γ E A' C i.
+  elim : Δ M M' B / h.
+  - move => Γ M N B h A0 Γ0 ? A' C i h0 h1. subst.
+    have : Γ0 ⊢ Lam A0 M ▻ Lam A0 N ∈ Pi A0 B by
+      hauto lq:on use:lh_refl_mutual db:wt.
+    move /WRs_Trans. apply.
+    move E : (Univ i) h0 =>T h0.
+    move : i E h h1.
+    elim : Γ0 A0 A' T / h0.
+    + move => Γ A0 A1 ? h i ? h0 h1; subst.
+      apply : WRs_One.
+      apply : WR_Lam; eauto; sfirstorder use:lh_refl_mutual, rh_refl_mutual.
+    + move => Γ A0 A1 A2 ? h0 h1 ih i ? h2 h3. subst.
+      move => [:tr0].
+      apply WRs_Trans with (N := Lam A1 N).
+      abstract : tr0.
+      qauto l:on use:lh_refl_mutual, rh_refl_mutual db:wt.
+      specialize ih with (1 := eq_refl).
+      move /Ctx_conv in h2.
+      move /Ctx_conv in h3.
+      have h4 : Γ ⊢ A0 ≡ A1 by qauto l:on db:wt.
+      have h5 : ⊢ A1 :: Γ by qauto l:on inv:WtReds db:wt.
+      move /(_ _ h4 h5) in h2.
+      move /(_ _ h4 h5) in h3.
+      move /(_ h2 h3) : ih.
+      move /(proj1 rh_refl_mutual) /exchange_multi_step : tr0.
+      apply.
+  - move => Γ M N P A hM hN ih A0 Γ0 ? A' C i h0 h1; subst.
+    specialize ih with (1 := eq_refl) (2 := h0) (3 := h1).
+    apply : WRs_Trans; last by exact ih.
+    qauto l:on use:lh_refl_mutual db:wt.
+Qed.
