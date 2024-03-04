@@ -185,7 +185,7 @@ Proof.
   move : h1. apply Equiv_sym.
 Qed.
 
-Lemma left_hand_reflexivity_helper Γ A0 A i B :
+Lemma lh_refl_helper Γ A0 A i B :
   Γ ⊢ A0 ▻+ A ∈ Univ i ->
   A :: Γ ⊢ B ▻ B ∈ Univ i ->
   Γ ⊢ Pi A0 B ▻+ Pi A B ∈ Univ i.
@@ -207,7 +207,7 @@ Proof.
     hauto lq:on rew:off use:wrs_Equiv, Equiv_sym db:wt.
 Qed.
 
-Lemma left_hand_reflexivity_mutual :
+Lemma lh_refl_mutual :
   (forall Γ a b A, Γ ⊢ a ▻ b ∈ A -> Γ ⊢ a ▻ a ∈ A ) /\
   (forall Γ a b A, Γ ⊢ a ▻+ b ∈ A -> Γ ⊢ a ▻ a ∈ A ) /\
   (forall Γ, ⊢ Γ -> True).
@@ -222,9 +222,9 @@ Proof.
     apply lookup_good_id; eauto.
   - apply : WR_Conv.
     + apply : WR_Lam; eauto.
-    + have : Γ ⊢ Pi A0 B ▻+ Pi A B ∈ Univ i by eauto using left_hand_reflexivity_helper.
+    + have : Γ ⊢ Pi A0 B ▻+ Pi A B ∈ Univ i by eauto using lh_refl_helper.
       move /Ctx_conv /(_ ltac:(sfirstorder) ltac:(hauto lq:on db:wt)) in hB.
-      have : Γ ⊢ Pi A0 B ▻+ Pi A' B ∈ Univ i by eauto using left_hand_reflexivity_helper.
+      have : Γ ⊢ Pi A0 B ▻+ Pi A' B ∈ Univ i by eauto using lh_refl_helper.
       move => /wrs_Equiv + /wrs_Equiv /Equiv_sym.
       move /[swap]. apply WE_Trans.
   - apply : WR_Conv; eauto.
@@ -253,7 +253,7 @@ Lemma lookup_good_morphing2_lh_refl ρ0 ρ1 Γ Δ :
   lookup_good_morphing2 ρ0 ρ1 Γ Δ ->
   lookup_good_morphing2 ρ0 ρ0 Γ Δ.
 Proof.
-  hauto lq:on use:left_hand_reflexivity_mutual unfold:lookup_good_morphing2.
+  hauto lq:on use:lh_refl_mutual unfold:lookup_good_morphing2.
 Qed.
 
 Lemma wt_morphing2_mutual :
@@ -273,8 +273,8 @@ Proof.
     apply WR_Beta' with (M' := M'[up_tm_tm ρ1]) (N' := N'[ρ1]) (A0 := A0[ρ0]) (i := i); eauto 3.
     + by asimpl.
     + by asimpl.
-    + qauto l:on db:wt use:left_hand_reflexivity_mutual.
-    + hauto lq:on rew:off db:wt use:left_hand_reflexivity_mutual.
+    + qauto l:on db:wt use:lh_refl_mutual.
+    + hauto lq:on rew:off db:wt use:lh_refl_mutual.
     + sfirstorder use:lookup_good_morphing2_lh_refl.
     + sfirstorder use:lookup_good_morphing2_lh_refl.
     + hauto lq:on use:good_morphing2_up, lookup_good_morphing2_lh_refl db:wt.
@@ -283,3 +283,36 @@ Proof.
   - qauto l:on use:lookup_good_morphing2_lh_refl, WR_Conv db:wt.
   - eauto using lookup_good_morphing2_lh_refl with wt.
 Qed.
+
+Lemma WR_cong Γ A B B' T M M' :
+  A :: Γ ⊢ B ▻ B' ∈ T ->
+  Γ ⊢ M ▻ M' ∈ A ->
+  Γ ⊢ B[M..] ▻ B'[M'..] ∈ T[M..].
+Proof.
+  move => + h.
+  move /(proj1 wt_morphing2_mutual).
+  apply; last by sfirstorder use:Wt_Wf_mutual.
+  move => k A0.
+  elim /lookup_inv=>_.
+  - move => ? ? ? []*. subst. by asimpl.
+  - move => n A1 Γ0 B0 ? ? []*. subst.
+    asimpl. hauto lq:on use:Wt_Wf_mutual db:wt.
+Qed.
+
+Lemma rh_refl_mutual :
+  (forall Γ a b A, Γ ⊢ a ▻ b ∈ A -> Γ ⊢ b ▻ b ∈ A ) /\
+  (forall Γ a b A, Γ ⊢ a ▻+ b ∈ A -> Γ ⊢ b ▻ b ∈ A ) /\
+  (forall Γ, ⊢ Γ -> True).
+Proof.
+  apply wt_mutual_ind; eauto with wt.
+  - eauto using Ctx_conv with wt.
+  - move => *.
+    apply : WR_Conv; eauto with wt.
+    hauto lq:on use:Ctx_conv db:wt.
+  - move => Γ A A' i B B' M M' N N' hA ihA hB ihB hM ihM hN ihN.
+    apply : WR_Conv; eauto with wt.
+    apply : WR_App; eauto with wt.
+    eauto using Ctx_conv with wt.
+    apply : WE_Exp.
+    apply /WR_cong : hB hN.
+  - move => Γ A i A' A0 B M M' N N' hA ihA.
