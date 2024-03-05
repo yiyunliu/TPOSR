@@ -729,7 +729,14 @@ Qed.
 Lemma Univ_multi_inv Γ i N T (h : Γ ⊢ Univ i ▻+ N ∈ T) :
   N = Univ i /\ Γ ⊢ T ≡ Univ (S i).
 Proof.
-Admitted.
+  move E : (Univ i) h => U h.
+  move : E.
+  elim : Γ U N T / h.
+  - move => > h *. subst. move/Univ_inv in h. hauto lq:on db:wt.
+  - move => Γ M N P A + h1 ih ?. subst.
+    move /Univ_inv => [?]h2. subst.
+    sfirstorder.
+Qed.
 
 Lemma regularity Γ M N A
   (h : Γ ⊢ M ▻ N ∈ A) :
