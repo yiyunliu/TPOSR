@@ -744,7 +744,6 @@ Lemma regularity Γ M N A
 Proof.
   elim : Γ M N A / h; eauto with wt.
   - sfirstorder use:lookup_wf.
-  - qauto l:on use:lh_refl_mutual db:wt.
   - move => Γ A A' i B B' M M' N N' hA
              [i0 ihA] hB [i1 ihB] hM [i2 ihM] hN [i3 ihN].
     move /Prod_inv : ihM.
@@ -756,6 +755,4 @@ Proof.
     exists i3.
     change (Univ i3) with (Univ i3)[N..].
     qauto l:on use:WR_cong, lh_refl_mutual, rh_refl_mutual db:wt.
-  - hauto lq:on use:rh_refl_mutual.
-  - hauto lq:on use:lh_refl_mutual.
 Qed.
