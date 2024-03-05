@@ -388,7 +388,7 @@ Proof.
 Qed.
 
 Lemma Prod_inv Γ A B N T (h : Γ ⊢ Pi A B ▻ N ∈ T) :
-  exists A' B' i, Γ ⊢ A ▻ A' ∈ Univ i /\ A::Γ ⊢ B ▻ B' ∈ Univ i /\ Γ ⊢ T ≡ Univ i.
+  exists A' B' i, N = Pi A' B' /\ Γ ⊢ A ▻ A' ∈ Univ i /\ A::Γ ⊢ B ▻ B' ∈ Univ i /\ Γ ⊢ T ≡ Univ i.
 Proof.
   move E : (Pi A B) h => M h.
   move : A B E.
@@ -456,7 +456,7 @@ Proof.
   - hauto l:on use:Univ_inv.
   - move => Γ i A A' B B' hA ihA hB ihB P B0.
     move /Prod_inv.
-    move => [A0][B1][i0][hA0][hB1]h.
+    move => [A0][B1][i0][hA0][hB1][?]h.
     apply : WR_Conv'; eauto.
     hauto lq:on db:wt.
   - move => Γ A A' i B M M' h ihA hB ihB hM ihM P B0 /Lam_inv.
@@ -678,7 +678,26 @@ Lemma Prod_multi_inv Γ A B N T :
   exists A' B' i,
     N = Pi A' B' /\ Γ ⊢ A ▻+ A' ∈ Univ i /\ A :: Γ ⊢ B ▻+ B' ∈ Univ i  /\ Γ ⊢ T ≡ Univ i.
 Proof.
-Admitted.
+  move E : (Pi A B) => U h.
+  move : A B E. elim : Γ U N T / h.
+  - move => > h *. subst.
+    move /Prod_inv in h.
+    hauto lq:on db:wt.
+  - move => Γ M N PA A hM hN ih A0 B ?. subst.
+    move /Prod_inv : hM.
+    move =>[A'][B'][i][?][h0][h1]h2. subst.
+    specialize ih with (1 := eq_refl).
+    move : ih => [A'0][B'0][i0][?][h3][h4]h5. subst.
+    exists A'0, B'0, i. repeat split =>//.
+    apply : WRs_Trans; first by eassumption.
+    move /wr_rh_refl : h0.
+    move :h3. apply exchange_multi_step.
+    move /Ctx_step /(_ h0) in h1.
+    apply : WRs_Ctx_conv; eauto with wt.
+    apply : WRs_Trans; first by eassumption.
+    move /wr_rh_refl : h1.
+    move : h4. apply exchange_multi_step.
+Qed.
 
 Lemma Lam_multi_inv Γ A M N T
   (h : Γ ⊢ Lam A M ▻+ N ∈ T) :
@@ -689,7 +708,23 @@ Lemma Lam_multi_inv Γ A M N T
     A::Γ ⊢ M ▻+ M' ∈ B /\
     Γ ⊢ T ≡ Pi A B.
 Proof.
-Admitted.
+  move E : (Lam A M) h => A0 h.
+  move : A M E.
+  elim : Γ A0 N T / h.
+  - move => > h *. subst.
+    move /Lam_inv in h.
+    hauto lq:on db:wt.
+  - move => Γ M N P A h0 h1 ih A0 M0 ?. subst.
+    move /Lam_inv : h0 => [A'][M'][B][i][?][h2][h3][h4]h9. subst.
+    specialize ih with (1 := eq_refl).
+    move : ih=>[A'0][M'0][B'][i0][?][h5][h6][h7]h8. subst.
+    exists A'0, M'0, B, i. repeat split =>//.
+    apply : WRs_Trans; eauto 2.
+    hauto lq:on rew:off use:exchange_multi_step db:wt.
+    apply : WRs_Ctx_conv; eauto 2 with wt.
+    move /Ctx_step /(_ h2) in h4.
+    hauto lq:on rew:off use:exchange_multi_step db:wt.
+Qed.
 
 Lemma Univ_multi_inv Γ i N T (h : Γ ⊢ Univ i ▻+ N ∈ T) :
   N = Univ i /\ Γ ⊢ T ≡ Univ (S i).
