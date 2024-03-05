@@ -12,6 +12,12 @@ Proof.
   move => + h. elim : A B / h; eauto with wt.
 Qed.
 
+Lemma WRs_Conv Γ a b A B : Γ ⊢ a ▻+ b ∈ A -> Γ ⊢ A ≡ B -> Γ ⊢ a ▻+ b ∈ B.
+Proof.
+  move => h. move : B.
+  elim : Γ a b A / h; qauto l:on use:WR_Conv db:wt.
+Qed.
+
 Lemma WR_Conv' Γ a b A B : Γ ⊢ a ▻ b ∈ A -> Γ ⊢ B ≡ A -> Γ ⊢ a ▻ b ∈ B.
 Proof. move => > + /Equiv_sym; apply WR_Conv. Qed.
 
@@ -188,6 +194,15 @@ Proof.
   move : h1. apply Equiv_sym.
 Qed.
 
+Lemma WRs_Ctx_conv A B Γ M N C (h : A :: Γ ⊢ M ▻+ N ∈ C) (h1 : Γ ⊢ A ≡ B)
+  (h2 : ⊢ B :: Γ) :
+  B :: Γ ⊢ M ▻+ N ∈ C.
+Proof.
+  move /(proj1 (proj2 wt_morphing_mutual)) /(_ var_tm) : h. asimpl. apply=>//.
+  apply lookup_good_id; eauto.
+  move : h1. apply Equiv_sym.
+Qed.
+
 Lemma lh_refl_helper Γ A0 A i B :
   Γ ⊢ A0 ▻+ A ∈ Univ i ->
   A :: Γ ⊢ B ▻ B ∈ Univ i ->
@@ -301,6 +316,14 @@ Proof.
   - move => n A1 Γ0 B0 ? ? []*. subst.
     asimpl. hauto lq:on use:Wt_Wf_mutual db:wt.
 Qed.
+
+(* This lemma is silly but I really need it because otherwise
+automation gets blocked too easily *)
+Lemma WR_cong_univ Γ A B B' i M M' :
+  A :: Γ ⊢ B ▻ B' ∈ Univ i ->
+  Γ ⊢ M ▻ M' ∈ A ->
+  Γ ⊢ B[M..] ▻ B'[M'..] ∈ Univ i.
+Proof. apply WR_cong. Qed.
 
 Lemma rh_refl_mutual :
   (forall Γ a b A, Γ ⊢ a ▻ b ∈ A -> Γ ⊢ b ▻ b ∈ A ) /\
@@ -538,6 +561,40 @@ Proof.
     qauto l:on use:lh_refl_mutual db:wt.
 Qed.
 
+
+Lemma wr_lh_refl :
+  (forall Γ a b A, Γ ⊢ a ▻ b ∈ A -> Γ ⊢ a ▻ a ∈ A ).
+Proof. exact (proj1 lh_refl_mutual). Qed.
+
+Lemma wrs_lh_refl :
+  (forall Γ a b A, Γ ⊢ a ▻+ b ∈ A -> Γ ⊢ a ▻ a ∈ A ).
+Proof. exact (proj1 (proj2 lh_refl_mutual)). Qed.
+
+Lemma wr_rh_refl :
+  (forall Γ a b A, Γ ⊢ a ▻ b ∈ A -> Γ ⊢ b ▻ b ∈ A ).
+Proof. exact (proj1 rh_refl_mutual). Qed.
+
+Lemma wrs_rh_refl :
+  (forall Γ a b A, Γ ⊢ a ▻+ b ∈ A -> Γ ⊢ b ▻ b ∈ A ).
+Proof. exact (proj1 (proj2 rh_refl_mutual)). Qed.
+
+#[export]Hint Resolve wr_lh_refl wrs_lh_refl wr_rh_refl wrs_rh_refl : wt.
+
+Lemma Ctx_step A B i Γ M N C (h : A :: Γ ⊢ M ▻ N ∈ C) (h1 : Γ ⊢ A ▻ B ∈ Univ i) :
+  B :: Γ ⊢ M ▻ N ∈ C.
+Proof.
+  apply : Ctx_conv; eauto with wt.
+Qed.
+
+Lemma WRs_Ctx_step A B i Γ M N C (h : A :: Γ ⊢ M ▻+ N ∈ C) (h1 : Γ ⊢ A ▻ B ∈ Univ i) :
+  B :: Γ ⊢ M ▻+ N ∈ C.
+Proof.
+  apply : WRs_Ctx_conv; eauto with wt.
+Qed.
+
+
+#[export]Hint Resolve Ctx_step : wt.
+
 Lemma App_cong Γ A A' i B B' M M' N N' :
   Γ ⊢ A ▻+ A' ∈ Univ i ->
   A :: Γ ⊢ B ▻+ B' ∈ Univ i ->
@@ -545,7 +602,76 @@ Lemma App_cong Γ A A' i B B' M M' N N' :
   Γ ⊢ N ▻+ N' ∈ A ->
   Γ ⊢ App A B M N ▻+ App A' B' M' N' ∈ B[N..].
 Proof.
-Admitted.
+  move E  : (Univ i) => T h.
+  move : B B' M M' N N' i E.
+  elim : Γ A A' T / h.
+  - move => Γ M N A h B B' M0 M' N0 N' i ? h0 h1 h2. subst.
+    apply WRs_Trans with (N := App N B M0 N0).
+    apply WR_App with (i := i); eauto 3 with wt.
+    have : Γ ⊢ M0 ▻+ M' ∈ Pi N B.
+    apply : WRs_Conv; eauto.
+    apply wrs_Equiv with (i := i).
+    apply WRs_One.
+    apply WR_Prod; eauto with wt.
+    move /WRs_Ctx_step in h0. move/(_ _ _ ltac:(by eauto with wt)) in h0.
+    move /WRs_Conv in h2.
+    move /(_ N ltac:(by eauto with wt)) in h2.
+    move /wr_rh_refl in h.
+    move {h1}  => h1 {M}.
+    move E : (N :: Γ)  h0 M0 M' N0 N' h1 h2 => Δ h0.
+    move : E.
+    move E : (Univ i) h0  => T h0.
+    move : E.
+    elim : Δ B B' T / h0.
+    + move => ? P P' A h0 ? ? M0 M' Q Q' h2 h3. subst.
+      apply (WRs_Trans _ _ (App N P' M0 Q)).
+      apply : WR_App; eauto with wt.
+      apply (WRs_Conv _ _ _ P'[Q..]); cycle 1.
+      apply WE_Exp with (i := i).
+      change (Univ i) with (Univ i)[Q..].
+      eauto using WR_cong with wt.
+      have : Γ ⊢ Pi N P ≡ Pi N P' by eauto with wt.
+      move  /WRs_Conv : h2. move/[apply] => h2.
+      move /wr_rh_refl in h0.
+      move {P}.
+      move : Q Q' h3.
+      move E : (Pi N P') h2  => T h2.
+      move : h h0 E.
+      elim : Γ M0 M' T / h2.
+      * move => Γ M M' A hM hN hP' ? Q Q' hQ. subst.
+        apply WRs_Trans with (N := App N P' M' Q); first by eauto with wt.
+        move /wr_rh_refl in hM. move{M}.
+        move : hN hP' hM.
+        elim : Γ Q Q' N  / hQ; first by eauto with wt.
+        move => Γ M0 M1 M2 A hM0 hM1 ih hA hP' hM'.
+        apply WRs_Trans with (N := App A P' M' M1); first by eauto with wt.
+        move /(_ hA hP' hM') : ih.
+        move /WRs_Conv. apply.
+        apply WE_Exp with (i := i).
+        eauto using WR_cong_univ with wt.
+      * hauto lq:on db:wt.
+    + move => Γ0 M0 N0 P A hM0 hN0 ih ? ? M1 M' N1 N' h0 h1. subst.
+      specialize ih with (1 := eq_refl) (2 := eq_refl).
+      apply WRs_Trans with (N := App N N0 M1 N1).
+      apply WR_App with (i := i); eauto with wt.
+      apply : WRs_Conv.
+      apply ih; eauto with wt.
+      eauto using WRs_Conv with wt.
+      eauto using WR_cong_univ with wt.
+  - move => Γ M N P A hM hN ih B B' M0 M' N0 N' i ? hB hM0 hN0. subst.
+    have h0 : Γ ⊢ M ≡ N by eauto with wt.
+    have h1 : ⊢ N :: Γ by qauto l:on use:rh_refl_mutual db:wt.
+    specialize ih with (1 := eq_refl).
+    apply WRs_Trans with (N := App N B M0 N0).
+    apply WR_App with (i := i); sfirstorder use:lh_refl_mutual.
+    apply ih.
+    move : WRs_Ctx_conv hB (h0) (h1); repeat move/[apply]. exact.
+    apply : WRs_Conv; eauto.
+    apply : (wrs_Equiv _ _ _ i).
+    apply WRs_One.
+    apply WR_Prod=>//. sfirstorder use:lh_refl_mutual.
+    apply : WRs_Conv; eauto.
+Qed.
 
 Lemma Prod_multi_inv Γ A B N T :
   Γ ⊢ Pi A B ▻+ N ∈ T ->

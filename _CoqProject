@@ -2,5 +2,6 @@
 axioms.v
 imports.v
 syntax.v
+typing_properties.v
 typing.v
 unscoped.v
