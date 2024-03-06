@@ -756,3 +756,37 @@ Proof.
     change (Univ i3) with (Univ i3)[N..].
     qauto l:on use:WR_cong, lh_refl_mutual, rh_refl_mutual db:wt.
 Qed.
+
+Lemma wr_diamond : forall Γ M N A P B, Γ ⊢ M ▻ N ∈ A -> Γ ⊢ M ▻ P ∈ B -> exists Q, Γ ⊢ N ▻ Q ∈ B /\ Γ ⊢ P ▻ Q ∈ A.
+Proof.
+  move => Γ M N A + + h.
+  elim : Γ M N A / h.
+  - hauto lq:on rew:off ctrs:WtRed use:Var_inv.
+  - qauto l:on ctrs:WtRed use:Univ_inv.
+  - move => Γ i A A' B B' hA ihA hB ihB P B0 /Prod_inv.
+    move => [A'0][B'0][i0][?][h0][h1]h2. subst.
+    move /ihA : (h0) => [A''][hA0]hA1.
+    move /ihB : (h1) => [B''][hB0]hB1.
+    exists (Pi A'' B'').
+    split; eauto with wt.
+    apply WR_Conv' with (A := Univ i0)=>//.
+    eauto with wt.
+  - move => Γ A A' i B M M' hA ihA hB ihB hM ihM P B0 /Lam_inv.
+    move => [A'0][M'0][B1][i0][?][h0][h1][h2]h3. subst.
+    move /ihA : (h0) => [A''][hA0]hA1.
+    move /ihM : (h2) => [M''][hM0]hM1.
+    exists (Lam A'' M'').
+    split; eauto with wt.
+    + apply WR_Conv' with (A := Pi A' B1)=>//.
+      by eauto with wt.
+      by eauto using exchange with wt.
+    + apply WR_Conv' with (A := Pi A'0 B).
+      by eauto with wt.
+      by eauto using exchange with wt.
+  - move => Γ A A' i B B' M M' N N' hA ihA hB ihB hM ihM hN ihN P B0 /App_inv.
+    move => [A0][A'0][B'0][Q'][i0][h0][h1][h2][h3][].
+    +
+  - admit.
+  - hauto lq:on db:wt.
+  - hauto lq:on db:wt.
+Admitted.
