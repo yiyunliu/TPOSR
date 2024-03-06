@@ -368,6 +368,7 @@ Proof.
     apply /Wf_cons : h1.
 Qed.
 
+(* Adding Unit eta naively breaks inversion. Expand only when term is neutral? *)
 Lemma Univ_inv Γ i N T (h : Γ ⊢ Univ i ▻ N ∈ T) :
   N = Univ i /\ Γ ⊢ T ≡ Univ (S i).
 Proof.
