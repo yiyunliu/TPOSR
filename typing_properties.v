@@ -757,6 +757,17 @@ Proof.
     qauto l:on use:WR_cong, lh_refl_mutual, rh_refl_mutual db:wt.
 Qed.
 
+Lemma WRs_Trans0 Γ a b c A : Γ ⊢ a ▻+ b ∈ A -> Γ ⊢ b ▻+ c ∈ A -> Γ ⊢ a ▻+ c ∈ A.
+Proof.
+  move => h. move : c.
+  elim : Γ a b A / h; eauto with wt.
+Qed.
+
+Lemma WRs_TransR Γ a b c A : Γ ⊢ a ▻+ b ∈ A -> Γ ⊢ b ▻ c ∈ A -> Γ ⊢ a ▻+ c ∈ A.
+Proof.
+  eauto using WRs_Trans0 with wt.
+Qed.
+
 Lemma wr_diamond : forall Γ M N A P B, Γ ⊢ M ▻ N ∈ A -> Γ ⊢ M ▻ P ∈ B -> exists Q, Γ ⊢ N ▻ Q ∈ B /\ Γ ⊢ P ▻ Q ∈ A.
 Proof.
   move => Γ M N A + + h.
@@ -785,7 +796,62 @@ Proof.
       by eauto using exchange with wt.
   - move => Γ A A' i B B' M M' N N' hA ihA hB ihB hM ihM hN ihN P B0 /App_inv.
     move => [A0][A'0][B'0][Q'][i0][h0][h1][h2][h3][].
-    +
+    + move => [M0][?][hM0]?. subst.
+      move /ihM : (hM0) => [M''][h4]h5.
+      move /ihN : (h2) => [N0][h6]h7.
+      move /ihA : (h0) => [A''][h8]h9.
+      move /ihB : (h1) => [B''][h10]h11.
+      exists (App A'' B'' M'' N0). split.
+      * apply WR_Conv' with (A := B'[N'..]).
+        apply WR_App with (i := i0); eauto with wt.
+        move /WE_Trans : h3. apply.
+        eauto using WR_cong_univ with wt.
+      * apply WR_Conv' with (A := B'0[Q'..]).
+        apply WR_App with (i := i0); eauto using exchange with wt.
+        eauto using WR_cong_univ with wt.
+    + move => [A1][A''][M0][M0'][?][?][hM0][?][hA1]hA'. subst.
+      rename A'' into A.
+      have hL : Γ ⊢ Lam A0 M0 ▻ Lam A'0 M0' ∈ Pi A0 B by eauto with wt.
+      move /ihM : (hL) => [M''][hM1]/Lam_inv.
+      move => [A'1][M'0][B1][i1][?][hL0][hL1][hL2]hL3. subst.
+      rename M'0 into M''.
+      have heq : Γ ⊢ A0 ≡ A by eauto using wrs_Equiv, Equiv_sym with wt.
+      have : A :: Γ ⊢ B ▻ B'0 ∈ Univ i0.
+      apply Ctx_conv with (A := A0); eauto with wt.
+      move /ihB => [B''][hB0]hB1.
+      move /ihN : (h2) => [N''][hN0]hN1.
+      move /Lam_inv : hM => [A'2][ M'0][ B2] [i2][?][hA0][hB2][hM2]he. subst.
+      move /Lam_inv : hM1 => [A'3][M'][B3][i3][[? ?]][hA2][hB3][hM3]he'. subst.
+      have heq' : Γ ⊢ A ≡ A'2 by
+          move /Equiv_sym /WE_Trans : heq; apply;  eauto with wt.
+      (* have hh : A::Γ ⊢ B' ≡ B  by eauto with wt. *)
+      exists M'[N''..].
+      split.
+      * apply : WR_Conv'; eauto.
+        apply WR_Exp with (i := i) (A := B'[N'..]); cycle 1.
+        apply WR_cong_univ with (A := A); eauto.
+        have h : Γ ⊢ A0 ▻ A'2 ∈ Univ i0 by eauto using exchange with wt.
+        apply WR_Beta with (A0 := A1) (i := i0);
+          eauto 4 using exchange, WRs_TransR, Ctx_conv with wt.
+        move /exchange : hM3. apply.
+        apply wr_rh_refl with (a := M0).
+        apply : Ctx_step; eauto.
+        move /exchange : hM2. apply.
+        apply wr_lh_refl with (b := M0').
+        apply : WR_Conv; eauto.
+        apply : WE_Red.
+        apply : Ctx_conv; eauto using Equiv_sym with wt.
+      * rename Q' into N0.
+        eapply WR_Exp with (A := B[N0..]);
+          last by apply : WR_cong_univ; eauto with wt.
+        apply WR_cong with (A := A); last by assumption.
+        apply : exchange.
+        move : hL2.
+        move /Ctx_conv. apply; eauto with wt.
+        apply : wr_rh_refl.
+        apply : Ctx_conv.
+        move : hM0; eauto.
+        eauto. eauto with wt.
   - admit.
   - hauto lq:on db:wt.
   - hauto lq:on db:wt.
