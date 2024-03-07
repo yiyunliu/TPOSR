@@ -377,6 +377,13 @@ Qed.
    booleans won't step into unit and becomes equal?) *)
 (* For the diamond property to be provable, it is important that it
 does not imply consistency *)
+(* Actually, diamond doesn't even imply the consistency of the
+equational theory. It's impossible to rule out Pi Bool Nat = () = Pi Nat Bool *)
+(* What about removing exp? Expansion postponement? *)
+(* Can we give a direct proof of diamond without the exp rule? *)
+(* Can we prove exp a posteriori? *)
+(* Would the system without exp be helpful as an intermediate system
+for logical relations? *)
 Lemma Univ_inv Γ i N T (h : Γ ⊢ Univ i ▻ N ∈ T) :
   N = Univ i /\ Γ ⊢ T ≡ Univ (S i).
 Proof.
