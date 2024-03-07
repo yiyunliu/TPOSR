@@ -369,6 +369,14 @@ Proof.
 Qed.
 
 (* Adding Unit eta naively breaks inversion. Expand only when term is neutral? *)
+(* Can the weakened inversion principle still allow us to derive the diamond property? *)
+(* We can include the unit case still, but what properties can we recover? Diamond? Confluence? *)
+(* Conjecture: The only thing that's compromised is the strength of
+   progress + preservation. I think we can still prove it, but it
+   doesn't tell us much about safety (e.g. how do we know that two
+   booleans won't step into unit and becomes equal?) *)
+(* For the diamond property to be provable, it is important that it
+does not imply consistency *)
 Lemma Univ_inv Γ i N T (h : Γ ⊢ Univ i ▻ N ∈ T) :
   N = Univ i /\ Γ ⊢ T ≡ Univ (S i).
 Proof.
