@@ -12,114 +12,115 @@ Definition lookup_good_renaming ξ Γ Δ :=
 
 Derive Inversion lookup_inv with (forall i Γ A, lookup i Γ A).
 
-Reserved Notation "Γ ⊢ a ▻ b ∈  A" (at level 70, no associativity).
-Reserved Notation "Γ ⊢ a ▻+ b ∈  A" (at level 70, no associativity).
+Reserved Notation "Γ ⊢ a ▻ b ∈ B ⇒ A" (at level 70, no associativity).
+Reserved Notation "Γ ⊢ a ▻+ b ∈ A" (at level 70, no associativity).
 Reserved Notation "⊢ Γ" (at level 70, no associativity).
 
-Inductive WtRed : context -> tm -> tm -> tm -> Prop :=
+Inductive WtRed : context -> tm -> tm -> tm -> tm -> Prop :=
 | WR_Var Γ n A :
   ⊢ Γ ->
   lookup n Γ A ->
   (* ------------- *)
-  Γ ⊢ var_tm n ▻ var_tm n ∈ A
+  Γ ⊢ var_tm n ▻ var_tm n ∈ A ⇒ A
 
 | WR_Univ Γ i :
   ⊢ Γ ->
   (* ----------- *)
-  Γ ⊢ Univ i ▻ Univ i ∈ Univ (S i)
+  Γ ⊢ Univ i ▻ Univ i ∈ Univ (S i) ⇒ Univ (S i)
 
-| WR_Prod Γ i A A' B B' :
-  Γ ⊢ A ▻ A' ∈ Univ i ->
-  A :: Γ ⊢ B ▻ B' ∈ Univ i ->
+| WR_Prod Γ i _A _B A A' B B' :
+  Γ ⊢ A ▻ A' ∈ _A ⇒ Univ i ->
+  A :: Γ ⊢ B ▻ B' ∈ _B ⇒ Univ i ->
   (* ------------------- *)
-  Γ ⊢ Pi A B ▻ Pi A' B' ∈ Univ i
+  Γ ⊢ Pi A B ▻ Pi A' B' ∈ Univ i ⇒ Univ i
 
-| WR_Lam Γ A A' i B M M' :
-  Γ ⊢ A ▻ A' ∈ Univ i ->
-  A :: Γ ⊢ B ▻ B ∈ Univ i ->
-  A :: Γ ⊢ M ▻ M' ∈ B ->
+| WR_Lam Γ _A A A' i _B B _M M M' :
+  Γ ⊢ A ▻ A' ∈ _A ⇒ Univ i ->
+  A :: Γ ⊢ B ▻ B ∈ _B ⇒ Univ i ->
+  A :: Γ ⊢ M ▻ M' ∈ _M ⇒ B ->
   (* ------------------ *)
-  Γ ⊢ Lam A M ▻ Lam A' M' ∈ Pi A B
+  Γ ⊢ Lam A M ▻ Lam A' M' ∈ Pi A B ⇒ Pi A B
 
-| WR_App Γ A A' i B B' M M' N N' :
-  Γ ⊢ A ▻ A' ∈ Univ i ->
-  A :: Γ ⊢ B ▻ B' ∈ Univ i ->
-  Γ ⊢ M ▻ M' ∈ Pi A B ->
-  Γ ⊢ N ▻ N' ∈ A ->
+| WR_App Γ _A A A' i _B  B B' _M M M' _N N N' :
+  Γ ⊢ A ▻ A' ∈ _A ⇒ Univ i ->
+  A :: Γ ⊢ B ▻ B' ∈ _B ⇒ Univ i ->
+  Γ ⊢ M ▻ M' ∈ _M ⇒ Pi A B ->
+  Γ ⊢ N ▻ N' ∈ _N ⇒ A ->
   (* ------------------------ *)
-  Γ ⊢ App A B M N ▻ App A' B' M' N' ∈ B[N..]
+  Γ ⊢ App A B M N ▻ App A' B' M' N' ∈ B[N..] ⇒ B[N..]
 
-| WR_Beta Γ A i A' A0 B M M' N N' :
-  Γ ⊢ A ▻ A ∈ Univ i ->
-  Γ ⊢ A' ▻ A' ∈ Univ i ->
+| WR_Beta Γ i (A _A A' _A' A0 B _B M M' _M N N' _N : tm):
+  Γ ⊢ A ▻ A ∈ _A ⇒ Univ i ->
+  Γ ⊢ A' ▻ A' ∈ _A' ⇒ Univ i ->
   Γ ⊢ A0 ▻+ A ∈ Univ i ->
   Γ ⊢ A0 ▻+ A' ∈ Univ i ->
-  A :: Γ ⊢ B ▻ B ∈ Univ i ->
-  A :: Γ ⊢ M ▻ M' ∈ B ->
-  Γ ⊢ N ▻ N' ∈ A ->
+  A :: Γ ⊢ B ▻ B ∈ _B ⇒ Univ i ->
+  A :: Γ ⊢ M ▻ M' ∈ _M ⇒ B ->
+  Γ ⊢ N ▻ N' ∈ _N ⇒ A ->
   (*----------------------  *)
-  Γ ⊢ App A' B (Lam A M) N ▻ M'[N'..] ∈ B[N..]
+  Γ ⊢ App A' B (Lam A M) N ▻ M'[N'..] ∈ B[N..] ⇒ B[N..]
 
 | WR_TyUnit Γ i :
   ⊢ Γ ->
   (* ----------- *)
-  Γ ⊢ TyUnit ▻ TyUnit ∈ Univ i
+  Γ ⊢ TyUnit ▻ TyUnit ∈ Univ i ⇒ Univ i
 
 | WR_TmUnit Γ :
   ⊢ Γ ->
   (* ----------- *)
-  Γ ⊢ TmUnit ▻ TmUnit ∈ TyUnit
+  Γ ⊢ TmUnit ▻ TmUnit ∈ TyUnit ⇒ TyUnit
 
-| WR_TmUnitEta Γ a b :
-  Γ ⊢ a ▻ b ∈ TyUnit ->
+| WR_TmUnitEta Γ A i a b :
+  Γ ⊢ a ▻ b ∈ A ⇒ TyUnit ->
+  Γ ⊢ A ▻+ TyUnit ∈ Univ i ->
   (* ----------- *)
-  Γ ⊢ a ▻ TmUnit ∈ TyUnit
+  Γ ⊢ a ▻ TmUnit ∈ A ⇒ TyUnit
 
-| WR_Red Γ M N A B i :
-  Γ ⊢ M ▻ N ∈ A ->
-  Γ ⊢ A ▻ B ∈ Univ i ->
+| WR_Red Γ M N TM _A A B i :
+  Γ ⊢ M ▻ N ∈ TM ⇒ A ->
+  Γ ⊢ A ▻ B ∈ _A ⇒ Univ i ->
   (* ----------------- *)
-  Γ ⊢ M ▻ N ∈ B
+  Γ ⊢ M ▻ N ∈ TM ⇒ B
 
-| WR_Exp Γ M N A B i :
-  Γ ⊢ M ▻ N ∈ A ->
-  Γ ⊢ B ▻ A ∈ Univ i ->
+| WR_Exp Γ M N TM _B A B i :
+  Γ ⊢ M ▻ N ∈ TM ⇒ A ->
+  Γ ⊢ B ▻ A ∈ _B ⇒ Univ i ->
   (* ----------------- *)
-  Γ ⊢ M ▻ N ∈ B
+  Γ ⊢ M ▻ N ∈ TM ⇒ B
 
 with Wf : context -> Prop :=
 | Wf_nil :
   (* -------- *)
   ⊢ nil
-| Wf_cons Γ A B i :
-  Γ ⊢ A ▻ B ∈ Univ i ->
+| Wf_cons Γ A B _A i :
+  Γ ⊢ A ▻ B ∈ _A ⇒ Univ i ->
   (* ---------- *)
   ⊢ A :: Γ
 
 with WtReds : context -> tm -> tm -> tm -> Prop :=
-| WRs_One Γ M N A:
-  Γ ⊢ M ▻ N ∈ A ->
+| WRs_One Γ M N _M A:
+  Γ ⊢ M ▻ N ∈ _M ⇒ A ->
   (* ------------- *)
   Γ ⊢ M ▻+ N ∈ A
 
-| WRs_Trans Γ M N P A:
-  Γ ⊢ M ▻ N ∈ A ->
+| WRs_Trans Γ M N _M P A:
+  Γ ⊢ M ▻ N ∈ _M ⇒ A ->
   Γ ⊢ N ▻+ P ∈ A ->
   (* ------------- *)
   Γ ⊢ M ▻+ P ∈ A
 where
-"Γ ⊢ a ▻ b ∈ A" := (WtRed Γ a b A)
+"Γ ⊢ a ▻ b ∈ B ⇒ A" := (WtRed Γ a b B A)
 and "⊢ Γ" := (Wf Γ)
 and "Γ ⊢ a ▻+ b ∈ A" := (WtReds Γ a b A).
 
 Reserved Notation "Γ ⊢ A ≡ B" (at level 70, no associativity).
 Inductive WtEquiv Γ : tm -> tm -> Prop :=
-| WE_Red A B i :
-  Γ ⊢ A ▻ B ∈ Univ i ->
+| WE_Red A B _A i :
+  Γ ⊢ A ▻ B ∈ _A ⇒ Univ i ->
   (* ------------------- *)
   Γ ⊢ A ≡ B
-| WE_Exp A B i :
-  Γ ⊢ B ▻ A ∈ Univ i ->
+| WE_Exp A B i _B :
+  Γ ⊢ B ▻ A ∈ _B ⇒ Univ i ->
   (* ------------------- *)
   Γ ⊢ A ≡ B
 | WE_Trans A B C :
