@@ -868,7 +868,45 @@ Proof.
         apply : Ctx_conv.
         move : hM0; eauto.
         eauto. eauto with wt.
-  - admit.
+  - move => Γ A0 i A1 _A B0 M M' N N' hA0 ihA0 hA1 ihA1 _hA0 _hA1 hB0 ihB0 hM ihM hN ihN ? T.
+    move /App_inv => [A2] [A'] [B1] [N0'][i0][hA2][hB1][hN'][hB2][].
+    + move => [?][?][hA3]?. subst.
+      move /Lam_inv : hA3 => [A0'][M0'][B'][i1][?][hA3][hB'][hM']heq. subst.
+      move /ihM  : hM' {ihM} => [M''][hM0'']hM1''.
+      move /ihN : (hN') {ihN} => [N''][hN0'']hN1''.
+      exists M''[N''..].
+      split.
+      * apply : WR_Conv'; eauto.
+        eapply WR_Exp with (A := B0[N'..]).
+        apply : WR_cong; eauto using exchange with wt.
+        apply : WR_cong_univ; eauto with wt.
+      * eapply WR_Exp with (A := B1[N0'..]).
+        have ?  : Γ ⊢ A0 ▻ A0' ∈ Univ i by eauto using exchange with wt.
+        have ? : Γ ⊢ A2 ▻ A' ∈ Univ i by eauto using exchange with wt.
+        have ? : Γ ⊢ _A ▻+ A0' ∈ Univ i by eauto using WRs_TransR.
+        have ? : Γ ⊢ _A ▻+ A' ∈ Univ i by eauto using WRs_TransR.
+        have ? : Γ ⊢ A2 ≡ A0' by eauto using Conv_Equiv.
+        have ? : Γ ⊢ A0 ≡ A2 by eauto using Conv_Equiv.
+        have ? : Γ ⊢ A2 ≡ A0 by eauto using Equiv_sym.
+        apply WR_Beta with (A0 := _A) (i := i); eauto 3 using exchange, WRs_TransR with wt.
+        have ? : A2 :: Γ ⊢ B0 ▻ B0 ∈ Univ i by
+          apply Ctx_conv with (A := A0); eauto 3 using exchange with wt.
+        apply Ctx_conv with (A := A2); eauto 3 using exchange with wt.
+        eapply Ctx_step with (A := A0); eauto.
+        apply : WR_Red; eauto.
+        apply Ctx_conv with (A := A2); eauto 3 with wt.
+        apply : WR_cong_univ; eauto.
+    + move => [_A0][?][?][M0'][<-][[<- <-]][hM'][?][_hA2]_hA3. subst.
+      move /ihM  : hM' {ihM} => [M''][hM0'']hM1''.
+      move /ihN : (hN') {ihN} => [N''][hN0'']hN1''.
+      exists M''[N''..]. split.
+      * apply : WR_Conv'; eauto.
+        apply : WR_Exp.
+        apply : WR_cong; eauto using exchange with wt.
+        apply : WR_cong_univ; eauto.
+      * apply : WR_Exp.
+        apply : WR_cong; eauto using exchange with wt.
+        apply : WR_cong_univ; eauto using exchange.
   - hauto lq:on db:wt.
   - hauto lq:on db:wt.
-Admitted.
+Qed.
