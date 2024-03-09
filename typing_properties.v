@@ -78,6 +78,7 @@ Proof.
       eauto using good_renaming_up with wt.
     by asimpl.
     by asimpl.
+  - hauto q:on db:wt.
 Qed.
 
 Definition lookup_good_morphing ρ Γ Δ :=
@@ -125,6 +126,7 @@ Proof.
     hauto lq:on use:good_morphing_up db:wt.
     hauto lq:on use:good_morphing_up db:wt.
     by asimpl.
+  - hauto q:on db:wt.
 Qed.
 
 Lemma equiv_renaming Γ A B (h : Γ ⊢ A ≡ B) :
@@ -297,6 +299,7 @@ Proof.
     + sfirstorder use:lookup_good_morphing2_lh_refl.
     + hauto lq:on use:good_morphing2_up, lookup_good_morphing2_lh_refl db:wt.
     + hauto lq:on use:good_morphing2_up, lookup_good_morphing2_lh_refl db:wt.
+  - qauto db:wt.
   - qauto l:on use:lookup_good_morphing2_lh_refl, WR_Conv db:wt.
   - qauto l:on use:lookup_good_morphing2_lh_refl, WR_Conv db:wt.
   - eauto using lookup_good_morphing2_lh_refl with wt.
@@ -346,6 +349,7 @@ Proof.
     apply : WR_cong; eauto.
     apply : WE_Exp.
     apply /WR_cong : hB hN.
+  - hauto lq:on ctrs:WtRed use:Wt_Wf_mutual.
 Qed.
 
 Lemma lookup_wf Γ n A (h : ⊢ Γ) (h0 : lookup n Γ A) : exists i, Γ ⊢ A ▻ A ∈ Univ i.
@@ -385,11 +389,12 @@ equational theory. It's impossible to rule out Pi Bool Nat = () = Pi Nat Bool *)
 (* Would the system without exp be helpful as an intermediate system
 for logical relations? *)
 Lemma Univ_inv Γ i N T (h : Γ ⊢ Univ i ▻ N ∈ T) :
-  N = Univ i /\ Γ ⊢ T ≡ Univ (S i).
+  (N = Univ i /\ Γ ⊢ T ≡ Univ (S i)). (* \/ *)
+  (* (N = TmUnit /\ Γ ⊢ T ≡ Univ (S i)). *)
 Proof.
   move E : (Univ i) h => M h.
   move : i E.
-  elim : Γ M N T / h=>//;hauto lq:on rew:off db:wt.
+  elim : Γ M N T / h=>//; try hauto lq:on rew:off db:wt.
 Qed.
 
 Lemma Var_inv Γ n N T (h : Γ ⊢ var_tm n ▻ N ∈ T) :

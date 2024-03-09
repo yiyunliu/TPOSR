@@ -60,6 +60,21 @@ Inductive WtRed : context -> tm -> tm -> tm -> Prop :=
   (*----------------------  *)
   Γ ⊢ App A' B (Lam A M) N ▻ M'[N'..] ∈ B[N..]
 
+| WR_TyUnit Γ i :
+  ⊢ Γ ->
+  (* ----------- *)
+  Γ ⊢ TyUnit ▻ TyUnit ∈ Univ i
+
+| WR_TmUnit Γ :
+  ⊢ Γ ->
+  (* ----------- *)
+  Γ ⊢ TmUnit ▻ TmUnit ∈ TyUnit
+
+| WR_TmUnitEta Γ a b :
+  Γ ⊢ a ▻ b ∈ TyUnit ->
+  (* ----------- *)
+  Γ ⊢ a ▻ TmUnit ∈ TyUnit
+
 | WR_Red Γ M N A B i :
   Γ ⊢ M ▻ N ∈ A ->
   Γ ⊢ A ▻ B ∈ Univ i ->
@@ -124,4 +139,3 @@ Scheme red_ind := Induction for WtRed Sort Prop
     with wf_ind := Induction for Wf Sort Prop.
 
 Combined Scheme wt_mutual_ind from red_ind, reds_ind, wf_ind.
-Combined Scheme wt_mutual_ind' from red_ind, reds_ind.
