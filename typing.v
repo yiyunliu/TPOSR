@@ -47,18 +47,15 @@ Inductive WtRed : context -> tm -> tm -> tm -> Prop :=
   Γ ⊢ M ▻ M' ∈ Pi A B ->
   Γ ⊢ N ▻ N' ∈ A ->
   (* ------------------------ *)
-  Γ ⊢ App A B M N ▻ App A' B' M' N' ∈ B[N..]
+  Γ ⊢ App B M N ▻ App B' M' N' ∈ B[N..]
 
-| WR_Beta Γ A i A' A0 B M M' N N' :
-  Γ ⊢ A ▻ A ∈ Univ i ->
-  Γ ⊢ A' ▻ A' ∈ Univ i ->
-  Γ ⊢ A0 ▻+ A ∈ Univ i ->
-  Γ ⊢ A0 ▻+ A' ∈ Univ i ->
+| WR_Beta Γ A i A' B M M' N N' :
+  Γ ⊢ A ▻ A' ∈ Univ i ->
   A :: Γ ⊢ B ▻ B ∈ Univ i ->
   A :: Γ ⊢ M ▻ M' ∈ B ->
   Γ ⊢ N ▻ N' ∈ A ->
   (*----------------------  *)
-  Γ ⊢ App A' B (Lam A M) N ▻ M'[N'..] ∈ B[N..]
+  Γ ⊢ App B (Lam A M) N ▻ M'[N'..] ∈ B[N..]
 
 | WR_TyUnit Γ :
   ⊢ Γ ->
@@ -95,47 +92,50 @@ with Wf : context -> Prop :=
   Γ ⊢ A ▻ B ∈ Univ i ->
   (* ---------- *)
   ⊢ A :: Γ
+where "Γ ⊢ a ▻ b ∈ A" := (WtRed Γ a b A)
+and "⊢ Γ" := (Wf Γ).
 
-with WtReds : context -> tm -> tm -> tm -> Prop :=
-| WRs_One Γ M N A:
+
+Inductive WtReds Γ M N A : Prop :=
+| WRs_One :
   Γ ⊢ M ▻ N ∈ A ->
   (* ------------- *)
   Γ ⊢ M ▻+ N ∈ A
 
-| WRs_Trans Γ M N P A:
-  Γ ⊢ M ▻ N ∈ A ->
-  Γ ⊢ N ▻+ P ∈ A ->
+| WRs_Trans P :
+  Γ ⊢ M ▻ P ∈ A ->
+  Γ ⊢ P ▻+ N ∈ A ->
   (* ------------- *)
-  Γ ⊢ M ▻+ P ∈ A
+  Γ ⊢ M ▻+ N ∈ A
 where
-"Γ ⊢ a ▻ b ∈ A" := (WtRed Γ a b A)
-and "⊢ Γ" := (Wf Γ)
-and "Γ ⊢ a ▻+ b ∈ A" := (WtReds Γ a b A).
+ "Γ ⊢ a ▻+ b ∈ A" := (WtReds Γ a b A).
 
-Reserved Notation "Γ ⊢ A ≡ B" (at level 70, no associativity).
-Inductive WtEquiv Γ : tm -> tm -> Prop :=
-| WE_Red A B i :
-  Γ ⊢ A ▻ B ∈ Univ i ->
+Reserved Notation "Γ ⊢ M ≡ N ∈ i" (at level 70, no associativity).
+Inductive WtEquiv Γ M N i : Prop :=
+| WE_Red :
+  Γ ⊢ M ▻ N ∈ Univ i ->
   (* ------------------- *)
-  Γ ⊢ A ≡ B
-| WE_Exp A B i :
-  Γ ⊢ B ▻ A ∈ Univ i ->
+  Γ ⊢ M ≡ N ∈ i
+| WE_Exp :
+  Γ ⊢ N ▻ M ∈ Univ i ->
   (* ------------------- *)
-  Γ ⊢ A ≡ B
-| WE_Trans A B C :
-  Γ ⊢ A ≡ B ->
-  Γ ⊢ B ≡ C ->
-  Γ ⊢ A ≡ C
+  Γ ⊢ M ≡ N ∈ i
+| WE_Trans P :
+  Γ ⊢ M ≡ P ∈ i ->
+  Γ ⊢ P ≡ N ∈ i ->
+  (* ----------------- *)
+  Γ ⊢ M ≡ N ∈ i
 where
-"Γ ⊢ A ≡ B" := (WtEquiv Γ A B).
+"Γ ⊢ A ≡ B ∈ i" := (WtEquiv Γ A B i).
 
 #[export]Hint Constructors WtEquiv WtReds WtRed Wf : wt.
 
-Lemma Equiv_sym Γ A B (h : Γ ⊢ A ≡ B) : Γ ⊢ B ≡ A.
-Proof. elim : A B / h; eauto with wt. Qed.
+Lemma Equiv_sym Γ A B i (h : Γ ⊢ A ≡ B ∈ i) : Γ ⊢ B ≡ A ∈ i.
+Proof. elim : h; eauto with wt. Qed.
+
+#[export]Hint Resolve Equiv_sym : wt.
 
 Scheme red_ind := Induction for WtRed Sort Prop
-    with reds_ind := Induction for WtReds Sort Prop
     with wf_ind := Induction for Wf Sort Prop.
 
-Combined Scheme wt_mutual_ind from red_ind, reds_ind, wf_ind.
+Combined Scheme wt_mutual_ind from red_ind, wf_ind.

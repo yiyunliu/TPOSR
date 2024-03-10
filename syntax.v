@@ -8,7 +8,7 @@ Inductive tm  : Type :=
   | var_tm : ( fin ) -> tm 
   | Univ : ( nat   ) -> tm 
   | Lam : ( tm   ) -> ( tm   ) -> tm 
-  | App : ( tm   ) -> ( tm   ) -> ( tm   ) -> ( tm   ) -> tm 
+  | App : ( tm   ) -> ( tm   ) -> ( tm   ) -> tm 
   | Pi : ( tm   ) -> ( tm   ) -> tm 
   | TmUnit : tm 
   | TyUnit : tm .
@@ -19,7 +19,7 @@ Proof. congruence. Qed.
 Lemma congr_Lam  { s0 : tm   } { s1 : tm   } { t0 : tm   } { t1 : tm   } (H1 : s0 = t0) (H2 : s1 = t1) : Lam  s0 s1 = Lam  t0 t1 .
 Proof. congruence. Qed.
 
-Lemma congr_App  { s0 : tm   } { s1 : tm   } { s2 : tm   } { s3 : tm   } { t0 : tm   } { t1 : tm   } { t2 : tm   } { t3 : tm   } (H1 : s0 = t0) (H2 : s1 = t1) (H3 : s2 = t2) (H4 : s3 = t3) : App  s0 s1 s2 s3 = App  t0 t1 t2 t3 .
+Lemma congr_App  { s0 : tm   } { s1 : tm   } { s2 : tm   } { t0 : tm   } { t1 : tm   } { t2 : tm   } (H1 : s0 = t0) (H2 : s1 = t1) (H3 : s2 = t2) : App  s0 s1 s2 = App  t0 t1 t2 .
 Proof. congruence. Qed.
 
 Lemma congr_Pi  { s0 : tm   } { s1 : tm   } { t0 : tm   } { t1 : tm   } (H1 : s0 = t0) (H2 : s1 = t1) : Pi  s0 s1 = Pi  t0 t1 .
@@ -39,7 +39,7 @@ Fixpoint ren_tm   (xitm : ( fin ) -> fin) (s : tm ) : tm  :=
     | var_tm  s => (var_tm ) (xitm s)
     | Univ  s0 => Univ  ((fun x => x) s0)
     | Lam  s0 s1 => Lam  ((ren_tm xitm) s0) ((ren_tm (upRen_tm_tm xitm)) s1)
-    | App  s0 s1 s2 s3 => App  ((ren_tm xitm) s0) ((ren_tm (upRen_tm_tm xitm)) s1) ((ren_tm xitm) s2) ((ren_tm xitm) s3)
+    | App  s0 s1 s2 => App  ((ren_tm (upRen_tm_tm xitm)) s0) ((ren_tm xitm) s1) ((ren_tm xitm) s2)
     | Pi  s0 s1 => Pi  ((ren_tm xitm) s0) ((ren_tm (upRen_tm_tm xitm)) s1)
     | TmUnit   => TmUnit 
     | TyUnit   => TyUnit 
@@ -53,7 +53,7 @@ Fixpoint subst_tm   (sigmatm : ( fin ) -> tm ) (s : tm ) : tm  :=
     | var_tm  s => sigmatm s
     | Univ  s0 => Univ  ((fun x => x) s0)
     | Lam  s0 s1 => Lam  ((subst_tm sigmatm) s0) ((subst_tm (up_tm_tm sigmatm)) s1)
-    | App  s0 s1 s2 s3 => App  ((subst_tm sigmatm) s0) ((subst_tm (up_tm_tm sigmatm)) s1) ((subst_tm sigmatm) s2) ((subst_tm sigmatm) s3)
+    | App  s0 s1 s2 => App  ((subst_tm (up_tm_tm sigmatm)) s0) ((subst_tm sigmatm) s1) ((subst_tm sigmatm) s2)
     | Pi  s0 s1 => Pi  ((subst_tm sigmatm) s0) ((subst_tm (up_tm_tm sigmatm)) s1)
     | TmUnit   => TmUnit 
     | TyUnit   => TyUnit 
@@ -70,7 +70,7 @@ Fixpoint idSubst_tm  (sigmatm : ( fin ) -> tm ) (Eqtm : forall x, sigmatm x = (v
     | var_tm  s => Eqtm s
     | Univ  s0 => congr_Univ ((fun x => (eq_refl) x) s0)
     | Lam  s0 s1 => congr_Lam ((idSubst_tm sigmatm Eqtm) s0) ((idSubst_tm (up_tm_tm sigmatm) (upId_tm_tm (_) Eqtm)) s1)
-    | App  s0 s1 s2 s3 => congr_App ((idSubst_tm sigmatm Eqtm) s0) ((idSubst_tm (up_tm_tm sigmatm) (upId_tm_tm (_) Eqtm)) s1) ((idSubst_tm sigmatm Eqtm) s2) ((idSubst_tm sigmatm Eqtm) s3)
+    | App  s0 s1 s2 => congr_App ((idSubst_tm (up_tm_tm sigmatm) (upId_tm_tm (_) Eqtm)) s0) ((idSubst_tm sigmatm Eqtm) s1) ((idSubst_tm sigmatm Eqtm) s2)
     | Pi  s0 s1 => congr_Pi ((idSubst_tm sigmatm Eqtm) s0) ((idSubst_tm (up_tm_tm sigmatm) (upId_tm_tm (_) Eqtm)) s1)
     | TmUnit   => congr_TmUnit 
     | TyUnit   => congr_TyUnit 
@@ -87,7 +87,7 @@ Fixpoint extRen_tm   (xitm : ( fin ) -> fin) (zetatm : ( fin ) -> fin) (Eqtm : f
     | var_tm  s => (ap) (var_tm ) (Eqtm s)
     | Univ  s0 => congr_Univ ((fun x => (eq_refl) x) s0)
     | Lam  s0 s1 => congr_Lam ((extRen_tm xitm zetatm Eqtm) s0) ((extRen_tm (upRen_tm_tm xitm) (upRen_tm_tm zetatm) (upExtRen_tm_tm (_) (_) Eqtm)) s1)
-    | App  s0 s1 s2 s3 => congr_App ((extRen_tm xitm zetatm Eqtm) s0) ((extRen_tm (upRen_tm_tm xitm) (upRen_tm_tm zetatm) (upExtRen_tm_tm (_) (_) Eqtm)) s1) ((extRen_tm xitm zetatm Eqtm) s2) ((extRen_tm xitm zetatm Eqtm) s3)
+    | App  s0 s1 s2 => congr_App ((extRen_tm (upRen_tm_tm xitm) (upRen_tm_tm zetatm) (upExtRen_tm_tm (_) (_) Eqtm)) s0) ((extRen_tm xitm zetatm Eqtm) s1) ((extRen_tm xitm zetatm Eqtm) s2)
     | Pi  s0 s1 => congr_Pi ((extRen_tm xitm zetatm Eqtm) s0) ((extRen_tm (upRen_tm_tm xitm) (upRen_tm_tm zetatm) (upExtRen_tm_tm (_) (_) Eqtm)) s1)
     | TmUnit   => congr_TmUnit 
     | TyUnit   => congr_TyUnit 
@@ -104,7 +104,7 @@ Fixpoint ext_tm   (sigmatm : ( fin ) -> tm ) (tautm : ( fin ) -> tm ) (Eqtm : fo
     | var_tm  s => Eqtm s
     | Univ  s0 => congr_Univ ((fun x => (eq_refl) x) s0)
     | Lam  s0 s1 => congr_Lam ((ext_tm sigmatm tautm Eqtm) s0) ((ext_tm (up_tm_tm sigmatm) (up_tm_tm tautm) (upExt_tm_tm (_) (_) Eqtm)) s1)
-    | App  s0 s1 s2 s3 => congr_App ((ext_tm sigmatm tautm Eqtm) s0) ((ext_tm (up_tm_tm sigmatm) (up_tm_tm tautm) (upExt_tm_tm (_) (_) Eqtm)) s1) ((ext_tm sigmatm tautm Eqtm) s2) ((ext_tm sigmatm tautm Eqtm) s3)
+    | App  s0 s1 s2 => congr_App ((ext_tm (up_tm_tm sigmatm) (up_tm_tm tautm) (upExt_tm_tm (_) (_) Eqtm)) s0) ((ext_tm sigmatm tautm Eqtm) s1) ((ext_tm sigmatm tautm Eqtm) s2)
     | Pi  s0 s1 => congr_Pi ((ext_tm sigmatm tautm Eqtm) s0) ((ext_tm (up_tm_tm sigmatm) (up_tm_tm tautm) (upExt_tm_tm (_) (_) Eqtm)) s1)
     | TmUnit   => congr_TmUnit 
     | TyUnit   => congr_TyUnit 
@@ -118,7 +118,7 @@ Fixpoint compRenRen_tm    (xitm : ( fin ) -> fin) (zetatm : ( fin ) -> fin) (rho
     | var_tm  s => (ap) (var_tm ) (Eqtm s)
     | Univ  s0 => congr_Univ ((fun x => (eq_refl) x) s0)
     | Lam  s0 s1 => congr_Lam ((compRenRen_tm xitm zetatm rhotm Eqtm) s0) ((compRenRen_tm (upRen_tm_tm xitm) (upRen_tm_tm zetatm) (upRen_tm_tm rhotm) (up_ren_ren (_) (_) (_) Eqtm)) s1)
-    | App  s0 s1 s2 s3 => congr_App ((compRenRen_tm xitm zetatm rhotm Eqtm) s0) ((compRenRen_tm (upRen_tm_tm xitm) (upRen_tm_tm zetatm) (upRen_tm_tm rhotm) (up_ren_ren (_) (_) (_) Eqtm)) s1) ((compRenRen_tm xitm zetatm rhotm Eqtm) s2) ((compRenRen_tm xitm zetatm rhotm Eqtm) s3)
+    | App  s0 s1 s2 => congr_App ((compRenRen_tm (upRen_tm_tm xitm) (upRen_tm_tm zetatm) (upRen_tm_tm rhotm) (up_ren_ren (_) (_) (_) Eqtm)) s0) ((compRenRen_tm xitm zetatm rhotm Eqtm) s1) ((compRenRen_tm xitm zetatm rhotm Eqtm) s2)
     | Pi  s0 s1 => congr_Pi ((compRenRen_tm xitm zetatm rhotm Eqtm) s0) ((compRenRen_tm (upRen_tm_tm xitm) (upRen_tm_tm zetatm) (upRen_tm_tm rhotm) (up_ren_ren (_) (_) (_) Eqtm)) s1)
     | TmUnit   => congr_TmUnit 
     | TyUnit   => congr_TyUnit 
@@ -135,7 +135,7 @@ Fixpoint compRenSubst_tm    (xitm : ( fin ) -> fin) (tautm : ( fin ) -> tm ) (th
     | var_tm  s => Eqtm s
     | Univ  s0 => congr_Univ ((fun x => (eq_refl) x) s0)
     | Lam  s0 s1 => congr_Lam ((compRenSubst_tm xitm tautm thetatm Eqtm) s0) ((compRenSubst_tm (upRen_tm_tm xitm) (up_tm_tm tautm) (up_tm_tm thetatm) (up_ren_subst_tm_tm (_) (_) (_) Eqtm)) s1)
-    | App  s0 s1 s2 s3 => congr_App ((compRenSubst_tm xitm tautm thetatm Eqtm) s0) ((compRenSubst_tm (upRen_tm_tm xitm) (up_tm_tm tautm) (up_tm_tm thetatm) (up_ren_subst_tm_tm (_) (_) (_) Eqtm)) s1) ((compRenSubst_tm xitm tautm thetatm Eqtm) s2) ((compRenSubst_tm xitm tautm thetatm Eqtm) s3)
+    | App  s0 s1 s2 => congr_App ((compRenSubst_tm (upRen_tm_tm xitm) (up_tm_tm tautm) (up_tm_tm thetatm) (up_ren_subst_tm_tm (_) (_) (_) Eqtm)) s0) ((compRenSubst_tm xitm tautm thetatm Eqtm) s1) ((compRenSubst_tm xitm tautm thetatm Eqtm) s2)
     | Pi  s0 s1 => congr_Pi ((compRenSubst_tm xitm tautm thetatm Eqtm) s0) ((compRenSubst_tm (upRen_tm_tm xitm) (up_tm_tm tautm) (up_tm_tm thetatm) (up_ren_subst_tm_tm (_) (_) (_) Eqtm)) s1)
     | TmUnit   => congr_TmUnit 
     | TyUnit   => congr_TyUnit 
@@ -152,7 +152,7 @@ Fixpoint compSubstRen_tm    (sigmatm : ( fin ) -> tm ) (zetatm : ( fin ) -> fin)
     | var_tm  s => Eqtm s
     | Univ  s0 => congr_Univ ((fun x => (eq_refl) x) s0)
     | Lam  s0 s1 => congr_Lam ((compSubstRen_tm sigmatm zetatm thetatm Eqtm) s0) ((compSubstRen_tm (up_tm_tm sigmatm) (upRen_tm_tm zetatm) (up_tm_tm thetatm) (up_subst_ren_tm_tm (_) (_) (_) Eqtm)) s1)
-    | App  s0 s1 s2 s3 => congr_App ((compSubstRen_tm sigmatm zetatm thetatm Eqtm) s0) ((compSubstRen_tm (up_tm_tm sigmatm) (upRen_tm_tm zetatm) (up_tm_tm thetatm) (up_subst_ren_tm_tm (_) (_) (_) Eqtm)) s1) ((compSubstRen_tm sigmatm zetatm thetatm Eqtm) s2) ((compSubstRen_tm sigmatm zetatm thetatm Eqtm) s3)
+    | App  s0 s1 s2 => congr_App ((compSubstRen_tm (up_tm_tm sigmatm) (upRen_tm_tm zetatm) (up_tm_tm thetatm) (up_subst_ren_tm_tm (_) (_) (_) Eqtm)) s0) ((compSubstRen_tm sigmatm zetatm thetatm Eqtm) s1) ((compSubstRen_tm sigmatm zetatm thetatm Eqtm) s2)
     | Pi  s0 s1 => congr_Pi ((compSubstRen_tm sigmatm zetatm thetatm Eqtm) s0) ((compSubstRen_tm (up_tm_tm sigmatm) (upRen_tm_tm zetatm) (up_tm_tm thetatm) (up_subst_ren_tm_tm (_) (_) (_) Eqtm)) s1)
     | TmUnit   => congr_TmUnit 
     | TyUnit   => congr_TyUnit 
@@ -169,7 +169,7 @@ Fixpoint compSubstSubst_tm    (sigmatm : ( fin ) -> tm ) (tautm : ( fin ) -> tm 
     | var_tm  s => Eqtm s
     | Univ  s0 => congr_Univ ((fun x => (eq_refl) x) s0)
     | Lam  s0 s1 => congr_Lam ((compSubstSubst_tm sigmatm tautm thetatm Eqtm) s0) ((compSubstSubst_tm (up_tm_tm sigmatm) (up_tm_tm tautm) (up_tm_tm thetatm) (up_subst_subst_tm_tm (_) (_) (_) Eqtm)) s1)
-    | App  s0 s1 s2 s3 => congr_App ((compSubstSubst_tm sigmatm tautm thetatm Eqtm) s0) ((compSubstSubst_tm (up_tm_tm sigmatm) (up_tm_tm tautm) (up_tm_tm thetatm) (up_subst_subst_tm_tm (_) (_) (_) Eqtm)) s1) ((compSubstSubst_tm sigmatm tautm thetatm Eqtm) s2) ((compSubstSubst_tm sigmatm tautm thetatm Eqtm) s3)
+    | App  s0 s1 s2 => congr_App ((compSubstSubst_tm (up_tm_tm sigmatm) (up_tm_tm tautm) (up_tm_tm thetatm) (up_subst_subst_tm_tm (_) (_) (_) Eqtm)) s0) ((compSubstSubst_tm sigmatm tautm thetatm Eqtm) s1) ((compSubstSubst_tm sigmatm tautm thetatm Eqtm) s2)
     | Pi  s0 s1 => congr_Pi ((compSubstSubst_tm sigmatm tautm thetatm Eqtm) s0) ((compSubstSubst_tm (up_tm_tm sigmatm) (up_tm_tm tautm) (up_tm_tm thetatm) (up_subst_subst_tm_tm (_) (_) (_) Eqtm)) s1)
     | TmUnit   => congr_TmUnit 
     | TyUnit   => congr_TyUnit 
@@ -186,7 +186,7 @@ Fixpoint rinst_inst_tm   (xitm : ( fin ) -> fin) (sigmatm : ( fin ) -> tm ) (Eqt
     | var_tm  s => Eqtm s
     | Univ  s0 => congr_Univ ((fun x => (eq_refl) x) s0)
     | Lam  s0 s1 => congr_Lam ((rinst_inst_tm xitm sigmatm Eqtm) s0) ((rinst_inst_tm (upRen_tm_tm xitm) (up_tm_tm sigmatm) (rinstInst_up_tm_tm (_) (_) Eqtm)) s1)
-    | App  s0 s1 s2 s3 => congr_App ((rinst_inst_tm xitm sigmatm Eqtm) s0) ((rinst_inst_tm (upRen_tm_tm xitm) (up_tm_tm sigmatm) (rinstInst_up_tm_tm (_) (_) Eqtm)) s1) ((rinst_inst_tm xitm sigmatm Eqtm) s2) ((rinst_inst_tm xitm sigmatm Eqtm) s3)
+    | App  s0 s1 s2 => congr_App ((rinst_inst_tm (upRen_tm_tm xitm) (up_tm_tm sigmatm) (rinstInst_up_tm_tm (_) (_) Eqtm)) s0) ((rinst_inst_tm xitm sigmatm Eqtm) s1) ((rinst_inst_tm xitm sigmatm Eqtm) s2)
     | Pi  s0 s1 => congr_Pi ((rinst_inst_tm xitm sigmatm Eqtm) s0) ((rinst_inst_tm (upRen_tm_tm xitm) (up_tm_tm sigmatm) (rinstInst_up_tm_tm (_) (_) Eqtm)) s1)
     | TmUnit   => congr_TmUnit 
     | TyUnit   => congr_TyUnit 
