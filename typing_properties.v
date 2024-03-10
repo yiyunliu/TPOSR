@@ -108,33 +108,33 @@ Lemma WRs_head_form_preservation :
                 forall h, head_form a = Some h -> head_form b = Some h.
 Proof. apply head_form_preservation_mutual. Qed.
 
-Lemma WR_App' Γ A A' i B B' M M' N N' T :
+Lemma WR_App' Γ _A A A' i _B  B B' _M M M' _N N N' T :
   T = B[N..] ->
-  Γ ⊢ A ▻ A' ∈ Univ i ->
-  A :: Γ ⊢ B ▻ B' ∈ Univ i ->
-  Γ ⊢ M ▻ M' ∈ Pi A B ->
-  Γ ⊢ N ▻ N' ∈ A ->
+  Γ ⊢ A ▻ A' ∈ _A ⇒ Univ i ->
+  A :: Γ ⊢ B ▻ B' ∈ _B ⇒ Univ i ->
+  Γ ⊢ M ▻ M' ∈ _M ⇒ Pi A B ->
+  Γ ⊢ N ▻ N' ∈ _N ⇒ A ->
   (* ------------------------ *)
-  Γ ⊢ App A B M N ▻ App A' B' M' N' ∈ T.
+  Γ ⊢ App A B M N ▻ App A' B' M' N' ∈ T ⇒ T.
 Proof. move =>> ->. apply WR_App. Qed.
 
-Lemma WR_Beta' Γ A i A' A0 B M M' N N' P T :
+Lemma WR_Beta' Γ i A _A A' _A' A0 B _B M M' _M N N' _N P T:
   P = M'[N'..] ->
   T = B[N..] ->
-  Γ ⊢ A ▻ A ∈ Univ i ->
-  Γ ⊢ A' ▻ A' ∈ Univ i ->
+  Γ ⊢ A ▻ A ∈ _A ⇒ Univ i ->
+  Γ ⊢ A' ▻ A' ∈ _A' ⇒ Univ i ->
   Γ ⊢ A0 ▻+ A ∈ Univ i ->
   Γ ⊢ A0 ▻+ A' ∈ Univ i ->
-  A :: Γ ⊢ B ▻ B ∈ Univ i ->
-  A :: Γ ⊢ M ▻ M' ∈ B ->
-  Γ ⊢ N ▻ N' ∈ A ->
+  A :: Γ ⊢ B ▻ B ∈ _B ⇒ Univ i ->
+  A :: Γ ⊢ M ▻ M' ∈ _M ⇒ B ->
+  Γ ⊢ N ▻ N' ∈ _N ⇒ A ->
   (*----------------------  *)
-  Γ ⊢ App A' B (Lam A M) N ▻ P ∈ T.
+  Γ ⊢ App A' B (Lam A M) N ▻ P ∈ T ⇒ T.
 Proof. move =>> -> ->. apply WR_Beta. Qed.
 
 Lemma wt_renaming_mutual :
-  (forall Γ a b A, Γ ⊢ a ▻ b ∈ A -> forall ξ Δ,
-        lookup_good_renaming ξ Γ Δ -> Wf Δ -> Δ ⊢ a⟨ξ⟩ ▻ b⟨ξ⟩ ∈ A⟨ξ⟩ ) /\
+  (forall Γ a b B A, Γ ⊢ a ▻ b ∈ B ⇒ A -> forall ξ Δ,
+        lookup_good_renaming ξ Γ Δ -> Wf Δ -> Δ ⊢ a⟨ξ⟩ ▻ b⟨ξ⟩ ∈ B⟨ξ⟩ ⇒ A⟨ξ⟩ ) /\
   (forall Γ a b A, Γ ⊢ a ▻+ b ∈ A -> forall ξ Δ,
         lookup_good_renaming ξ Γ Δ -> Wf Δ -> Δ ⊢ a⟨ξ⟩ ▻+ b⟨ξ⟩ ∈ A⟨ξ⟩ ) /\
   (forall Γ, ⊢ Γ -> True).
@@ -158,7 +158,7 @@ Proof.
 Qed.
 
 Definition lookup_good_morphing ρ Γ Δ :=
-  forall n A, lookup n Γ A -> Δ ⊢ ρ n ▻ ρ n ∈ A[ρ].
+  forall n A, lookup n Γ A -> Δ ⊢ ρ n ▻ ρ n ∈ A[ρ] ⇒ A[ρ].
 
 Lemma lookup_good_renaming_shift A Δ:
   lookup_good_renaming ↑ Δ (A :: Δ).
@@ -167,9 +167,9 @@ Proof. rewrite /lookup_good_renaming => >. apply there. Qed.
 Lemma subst_ren_factor A ρ ξ :  A[ρ >> ren_tm ξ ] = A[ρ]⟨ξ⟩.
 Proof. by asimpl. Qed.
 
-Lemma good_morphing_up ρ k Γ Δ A B
+Lemma good_morphing_up ρ k Γ Δ _A A B
   (h : lookup_good_morphing ρ Γ Δ) :
-  Δ ⊢ A[ρ] ▻ B ∈ Univ k ->
+  Δ ⊢ A[ρ] ▻ B ∈ _A ⇒ Univ k ->
   lookup_good_morphing (up_tm_tm ρ) (A :: Γ) (A [ρ] :: Δ).
 Proof.
   rewrite /lookup_good_morphing => h1.
@@ -184,8 +184,8 @@ Proof.
 Qed.
 
 Lemma wt_morphing_mutual :
-  (forall Γ a b A, Γ ⊢ a ▻ b ∈ A -> forall ρ Δ,
-        lookup_good_morphing ρ Γ Δ -> Wf Δ -> Δ ⊢ a[ρ] ▻ b[ρ] ∈ A[ρ] ) /\
+  (forall Γ a b B A, Γ ⊢ a ▻ b ∈ B ⇒ A -> forall ρ Δ,
+        lookup_good_morphing ρ Γ Δ -> Wf Δ -> Δ ⊢ a[ρ] ▻ b[ρ] ∈ B[ρ] ⇒ A[ρ]) /\
   (forall Γ a b A, Γ ⊢ a ▻+ b ∈ A -> forall ρ Δ,
         lookup_good_morphing ρ Γ Δ -> Wf Δ -> Δ ⊢ a[ρ] ▻+ b[ρ] ∈ A[ρ] ) /\
   (forall Γ, ⊢ Γ -> True).
@@ -196,7 +196,7 @@ Proof.
   - hauto q:on use:good_morphing_up db:wt.
   - move => *.
     apply : WR_App'; eauto. by asimpl. qauto l:on use:good_morphing_up db:wt.
-  - move => Γ A i A' A0 B M M' N N' hA ihA hA' ihA' hA00 ihA00 hA01 ihA01 hB ihB hM ihM hN ihN ρ Δ hρ hΔ /=.
+  - move => * /=.
     apply : WR_Beta'; eauto; cycle 1.
     by asimpl.
     hauto lq:on use:good_morphing_up db:wt.
