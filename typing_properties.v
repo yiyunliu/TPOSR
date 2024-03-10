@@ -7,7 +7,7 @@ Lemma there' : forall {n A Γ B T}, T = A ⟨shift⟩ ->
       lookup n Γ A -> lookup (S n) (B :: Γ) T.
 Proof. move => > ->. by apply there. Qed.
 
-Lemma WR_Conv Γ a b A B : Γ ⊢ a ▻ b ∈ A -> Γ ⊢ A ≡ B -> Γ ⊢ a ▻ b ∈ B.
+Lemma WR_Conv Γ a b A _a B : Γ ⊢ a ▻ b ∈ _a ⇒ A -> Γ ⊢ A ≡ B -> Γ ⊢ a ▻ b ∈ _a ⇒ B.
 Proof.
   move => + h. elim : A B / h; eauto with wt.
 Qed.
@@ -18,7 +18,7 @@ Proof.
   elim : Γ a b A / h; qauto l:on use:WR_Conv db:wt.
 Qed.
 
-Lemma WR_Conv' Γ a b A B : Γ ⊢ a ▻ b ∈ A -> Γ ⊢ B ≡ A -> Γ ⊢ a ▻ b ∈ B.
+Lemma WR_Conv' Γ a b _a A B : Γ ⊢ a ▻ b ∈ _a ⇒ A -> Γ ⊢ B ≡ A -> Γ ⊢ a ▻ b ∈ _a ⇒ B.
 Proof. move => > + /Equiv_sym; apply WR_Conv. Qed.
 
 Lemma good_renaming_up ξ Γ Δ A :
@@ -31,6 +31,82 @@ Proof.
   - apply here'. by asimpl.
   - asimpl. apply : there'; eauto. by asimpl.
 Qed.
+
+Lemma Wt_Wf_mutual :
+  (forall Γ a b B A, Γ ⊢ a ▻ b ∈ B ⇒ A -> ⊢ Γ ) /\
+  (forall Γ a b A, Γ ⊢ a ▻+ b ∈ A -> ⊢ Γ) /\
+  (forall Γ, ⊢ Γ -> True).
+Proof. apply wt_mutual_ind; eauto with wt. Qed.
+
+Variant Htm : Set := HUniv | HTyUnit | HTmUnit | HLam | HPi.
+
+Definition head_form (a : tm) : option Htm :=
+  match a with
+  | Univ _ => Some HUniv
+  | TyUnit => Some HTyUnit
+  | TmUnit => Some HTmUnit
+  | Pi _ _ => Some HPi
+  | Lam _ _ => Some HLam
+  | _ => None
+  end.
+
+Lemma Univ_inv_hf Γ i N U T (h : Γ ⊢ Univ i ▻ N ∈ U ⇒ T) : head_form U = Some HUniv.
+Proof.
+  move E : (Univ i) h => M h.
+  move : i E.
+  elim : Γ M N U T / h=>//; scongruence.
+Qed.
+
+Lemma TyUnit_inv_hf Γ N U T (h : Γ ⊢ TyUnit ▻ N ∈ U ⇒ T) : head_form U = Some HUniv.
+Proof.
+  move E : TyUnit h => M h.
+  move : E.
+  elim : Γ M N U T / h=>//; scongruence.
+Qed.
+
+Lemma Lam_inv_hf Γ A a N U T (h : Γ ⊢ Lam A a ▻ N ∈ U ⇒ T) : head_form U = Some HPi.
+Proof.
+  move E : (Lam A a) h => M h.
+  move : A a E.
+  elim : Γ M N U T / h=>//; scongruence.
+Qed.
+
+Lemma Pi_inv_hf Γ A B N U T (h : Γ ⊢ Pi A B ▻ N ∈ U ⇒ T) : head_form U = Some HUniv.
+Proof.
+  move E : (Pi A B) h => M h.
+  move : A B E.
+  elim : Γ M N U T / h=>//; scongruence.
+Qed.
+
+Lemma head_form_preservation_mutual :
+  (forall Γ a b B A, Γ ⊢ a ▻ b ∈ B ⇒ A ->
+                 forall h, head_form a = Some h -> head_form b = Some h) /\
+  (forall Γ a b A, Γ ⊢ a ▻+ b ∈ A ->
+               forall h, head_form a = Some h -> head_form b = Some h) /\
+  (forall Γ, ⊢ Γ -> True).
+Proof.
+  apply wt_mutual_ind=>//; auto with wt.
+  move => Γ A i a b ha iha hA ihA.
+  case => //.
+  - case : a ha iha=>//.
+    hauto q:on use:Univ_inv_hf.
+  - case : a ha iha=>//.
+    hauto l:on use:TyUnit_inv_hf.
+  - case : a ha iha=>//.
+    hauto lq:on rew:off use:Lam_inv_hf.
+  - case : a ha iha=>//.
+    hauto lq:on rew:off use:Pi_inv_hf.
+Qed.
+
+Lemma WR_head_form_preservation :
+  forall Γ a b B A, Γ ⊢ a ▻ b ∈ B ⇒ A ->
+                forall h, head_form a = Some h -> head_form b = Some h.
+Proof. apply head_form_preservation_mutual. Qed.
+
+Lemma WRs_head_form_preservation :
+  forall Γ a b B, Γ ⊢ a ▻+ b ∈ B ->
+                forall h, head_form a = Some h -> head_form b = Some h.
+Proof. apply head_form_preservation_mutual. Qed.
 
 Lemma WR_App' Γ A A' i B B' M M' N N' T :
   T = B[N..] ->
@@ -156,12 +232,6 @@ Proof.
   move => /wrs_Equiv /Equiv_sym + /wrs_Equiv.
   apply WE_Trans.
 Qed.
-
-Lemma Wt_Wf_mutual :
-  (forall Γ a b A, Γ ⊢ a ▻ b ∈ A -> ⊢ Γ ) /\
-  (forall Γ a b A, Γ ⊢ a ▻+ b ∈ A -> ⊢ Γ) /\
-  (forall Γ, ⊢ Γ -> True).
-Proof. apply wt_mutual_ind; eauto with wt. Qed.
 
 Lemma Wf_cons_inv A Γ :
   ⊢ A :: Γ ->
@@ -388,13 +458,13 @@ equational theory. It's impossible to rule out Pi Bool Nat = () = Pi Nat Bool *)
 (* Can we prove exp a posteriori? *)
 (* Would the system without exp be helpful as an intermediate system
 for logical relations? *)
-Lemma Univ_inv Γ i N T (h : Γ ⊢ Univ i ▻ N ∈ T) :
-  (N = Univ i /\ Γ ⊢ T ≡ Univ (S i)). (* \/ *)
-  (* (N = TmUnit /\ Γ ⊢ T ≡ Univ (S i)). *)
+
+Lemma Univ_inv Γ i N U T (h : Γ ⊢ Univ i ▻ N ∈ U ⇒ T) :
+  N = Univ i /\ U = Univ (S i).
 Proof.
   move E : (Univ i) h => M h.
   move : i E.
-  elim : Γ M N T / h=>//; try hauto lq:on rew:off db:wt.
+  elim : Γ M N U T / h=>//; hauto q:on use:WRs_head_form_preservation.
 Qed.
 
 Lemma Var_inv Γ n N T (h : Γ ⊢ var_tm n ▻ N ∈ T) :
