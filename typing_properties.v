@@ -158,7 +158,7 @@ Proof.
 Qed.
 
 Definition lookup_good_morphing ρ Γ Δ :=
-  forall n A, lookup n Γ A -> Δ ⊢ ρ n ▻ ρ n ∈ A[ρ] ⇒ A[ρ].
+  forall n A, lookup n Γ A -> exists B, Δ ⊢ ρ n ▻ ρ n ∈ B ⇒ A[ρ].
 
 Lemma lookup_good_renaming_shift A Δ:
   lookup_good_renaming ↑ Δ (A :: Δ).
@@ -173,11 +173,17 @@ Lemma good_morphing_up ρ k Γ Δ _A A B
   lookup_good_morphing (up_tm_tm ρ) (A :: Γ) (A [ρ] :: Δ).
 Proof.
   rewrite /lookup_good_morphing => h1.
-  inversion 1=>*; subst.
-  - apply WR_Var => /=.
+  move => n A0.
+  elim /lookup_inv => _.
+  - move => A1 Γ0 ? []*. subst.
+    eexists.
+    apply WR_Var => /=.
     + eauto with wt.
     + asimpl. apply : here'. by asimpl.
-  - asimpl. rewrite !subst_ren_factor.
+  - move => n0 A1 Γ0 B0 + ? []*. subst.
+    move /h => [B0 h0].
+    exists B0⟨↑⟩.
+    asimpl. rewrite !subst_ren_factor.
     eapply wt_renaming_mutual. hauto l:on unfold:lookup_good_morphing.
     apply lookup_good_renaming_shift.
     eauto with wt.
@@ -185,7 +191,7 @@ Qed.
 
 Lemma wt_morphing_mutual :
   (forall Γ a b B A, Γ ⊢ a ▻ b ∈ B ⇒ A -> forall ρ Δ,
-        lookup_good_morphing ρ Γ Δ -> Wf Δ -> Δ ⊢ a[ρ] ▻ b[ρ] ∈ B[ρ] ⇒ A[ρ]) /\
+        lookup_good_morphing ρ Γ Δ -> Wf Δ -> exists B0, Δ ⊢ a[ρ] ▻ b[ρ] ∈ B0 ⇒ A[ρ]) /\
   (forall Γ a b A, Γ ⊢ a ▻+ b ∈ A -> forall ρ Δ,
         lookup_good_morphing ρ Γ Δ -> Wf Δ -> Δ ⊢ a[ρ] ▻+ b[ρ] ∈ A[ρ] ) /\
   (forall Γ, ⊢ Γ -> True).
@@ -193,17 +199,24 @@ Proof.
   apply wt_mutual_ind=>//; eauto with wt.
   - hauto q:on db:wt.
   - hauto q:on use:good_morphing_up db:wt.
-  - hauto q:on use:good_morphing_up db:wt.
-  - move => *.
-    apply : WR_App'; eauto. by asimpl. qauto l:on use:good_morphing_up db:wt.
-  - move => * /=.
-    apply : WR_Beta'; eauto; cycle 1.
-    by asimpl.
-    hauto lq:on use:good_morphing_up db:wt.
-    hauto lq:on use:good_morphing_up db:wt.
-    by asimpl.
-  - hauto q:on db:wt.
-Qed.
+  - move => Γ _A A A' i _B B _M M M' hA ihA hB ihB hM ihM ρ Δ hρ hΔ.
+    move /ihA /(_ hΔ) : (hρ).
+    move /(_ _ _ ltac:(hauto l:on use:good_morphing_up) ltac:(qauto l:on db:wt)) : ihB.
+    move /(_ _ _ ltac:(hauto l:on use:good_morphing_up) ltac:(qauto l:on db:wt)) : ihM.
+    simpl.
+    move => [B0]h[B1]h0[B2]h1.
+    eauto with wt.
+  - move => */=. eexists.
+    apply : WR_App'; eauto. by asimpl. resume here qauto l:on use:good_morphing_up db:wt.
+(*   - move => * /=. *)
+(*     apply : WR_Beta'; eauto; cycle 1. *)
+(*     by asimpl. *)
+(*     hauto lq:on use:good_morphing_up db:wt. *)
+(*     hauto lq:on use:good_morphing_up db:wt. *)
+(*     by asimpl. *)
+(*   - hauto q:on db:wt. *)
+(* Qed. *)
+Admitted.
 
 Lemma equiv_renaming Γ A B (h : Γ ⊢ A ≡ B) :
   forall ξ Δ, lookup_good_renaming ξ Γ Δ -> ⊢ Δ -> Δ ⊢ A⟨ξ⟩ ≡ B⟨ξ⟩.
@@ -212,8 +225,8 @@ Proof.
 Qed.
 
 Lemma wr_morphing :
-  forall Γ a b A, Γ ⊢ a ▻ b ∈ A -> forall ρ Δ,
-        lookup_good_morphing ρ Γ Δ -> Wf Δ -> Δ ⊢ a[ρ] ▻ b[ρ] ∈ A[ρ].
+  forall Γ a b B A, Γ ⊢ a ▻ b ∈ B ⇒ A -> forall ρ Δ,
+        lookup_good_morphing ρ Γ Δ -> Wf Δ -> exists B0, Δ ⊢ a[ρ] ▻ b[ρ] ∈ B0 ⇒ A[ρ].
 Proof. apply wt_morphing_mutual. Qed.
 
 Lemma wrs_Equiv Γ A B i (h : Γ ⊢ A ▻+ B ∈ Univ i) : Γ ⊢ A ≡ B.
@@ -235,7 +248,7 @@ Qed.
 
 Lemma Wf_cons_inv A Γ :
   ⊢ A :: Γ ->
-  ⊢ Γ /\ exists B i, Γ ⊢ A ▻ B ∈ Univ i.
+  ⊢ Γ /\ exists B _A i, Γ ⊢ A ▻ B ∈ _A ⇒ Univ i.
 Proof. hauto l:on inv:Wf use:Wt_Wf_mutual. Qed.
 
 Lemma lookup_good_id A A' Γ
@@ -246,20 +259,21 @@ Proof.
   move => k T.
   elim /lookup_inv => _.
   + move => ? ? ? []*. subst. asimpl.
+    eexists.
     apply WR_Conv with (A := A' ⟨↑⟩).
     hauto q:on ctrs:WtRed, lookup.
     apply : equiv_renaming=>//; last by apply lookup_good_renaming_shift. exact h.
-  + move => n A1 Γ0 B0 ? ? []*. subst.
+  + move => n A1 Γ0 B0 h1 ? []*. subst.
     asimpl.
     change (var_tm (↑ n)) with ((var_tm n)⟨↑⟩).
-    eapply wt_renaming_mutual=>//; last by apply lookup_good_renaming_shift.
-    apply : WR_Var; eauto.
-    sfirstorder use:Wf_cons_inv.
+    exists A1⟨↑⟩.
+    apply WR_Var; eauto.
+    hauto lq:on ctrs:lookup.
 Qed.
 
-Lemma Ctx_conv A B Γ M N C (h : A :: Γ ⊢ M ▻ N ∈ C) (h1 : Γ ⊢ A ≡ B)
+Lemma Ctx_conv A B Γ _M M N C (h : A :: Γ ⊢ M ▻ N ∈ _M ⇒ C) (h1 : Γ ⊢ A ≡ B)
   (h2 : ⊢ B :: Γ) :
-  B :: Γ ⊢ M ▻ N ∈ C.
+  exists _M', B :: Γ ⊢ M ▻ N ∈ _M' ⇒ C.
 Proof.
   move /wr_morphing /(_ var_tm) : h. asimpl. apply=>//.
   apply lookup_good_id; eauto.
@@ -275,41 +289,46 @@ Proof.
   move : h1. apply Equiv_sym.
 Qed.
 
-Lemma lh_refl_helper Γ A0 A i B :
+Lemma lh_refl_helper Γ A0 A i _B B :
   Γ ⊢ A0 ▻+ A ∈ Univ i ->
-  A :: Γ ⊢ B ▻ B ∈ Univ i ->
+  A :: Γ ⊢ B ▻ B ∈ _B ⇒ Univ i ->
   Γ ⊢ Pi A0 B ▻+ Pi A B ∈ Univ i.
 Proof.
   move E : (Univ i) => T h.
   move : i E.
   elim : Γ A0 A T / h.
-  - move => Γ A0 A ? h i ? hB; subst.
-    have ? : ⊢ A0 :: Γ by eauto with wt.
-    apply WRs_One.
-    apply : WR_Prod=>//.
-    apply : Ctx_conv; eauto with wt.
-  - move => Γ A A0 A1 T h0 h1 ih i ? h2. subst.
+  - move => Γ M N _M A h0 i ? h2. subst.
+    have h3 : ⊢ M :: Γ by eauto with wt.
+    move /Ctx_conv /(_ ltac:(eauto with wt) h3) : h2.
+    move => [M']hM'.
+    apply : WRs_One.
+    apply : WR_Prod=>//; eauto.
+  - move => Γ A A0 _A  A1 T h0 h1 ih i ? h2. subst.
     specialize ih with (1 := eq_refl).
     move /ih : (h2) {ih}.
+    have h3 : ⊢ A :: Γ by eauto with wt.
+    have h4 : Γ ⊢ A1 ≡ A by
+      hauto lq:on rew:off use:wrs_Equiv, Equiv_sym db:wt.
+    move /Ctx_conv /(_ h4 h3) : h2.
+    move => [_M']?.
     apply : WRs_Trans.
-    apply WR_Prod; eauto.
-    apply : Ctx_conv; eauto with wt.
-    hauto lq:on rew:off use:wrs_Equiv, Equiv_sym db:wt.
+    apply : WR_Prod; eauto.
 Qed.
 
 Lemma lh_refl_mutual :
-  (forall Γ a b A, Γ ⊢ a ▻ b ∈ A -> Γ ⊢ a ▻ a ∈ A ) /\
-  (forall Γ a b A, Γ ⊢ a ▻+ b ∈ A -> Γ ⊢ a ▻ a ∈ A ) /\
+  (forall Γ a b B A, Γ ⊢ a ▻ b ∈ B ⇒ A -> Γ ⊢ a ▻ a ∈ B ⇒ A ) /\
+  (forall Γ a b A, Γ ⊢ a ▻+ b ∈ A -> exists B, Γ ⊢ a ▻ a ∈ B ⇒ A ) /\
   (forall Γ, ⊢ Γ -> True).
 Proof.
   apply wt_mutual_ind=>//; eauto with wt.
-  move => Γ A i A' A0 B M M' N N' h0 _  h1 _ hA00 ihA00 hA01 ihA01 hB ihB hM ihM hN ihN.
+  move => Γ i A _A A' _A' A0 B _B M M' _M N N' _N h0 _  h1 _ hA00 [C0 ihA00] hA01 [C1 ihA01] hB ihB hM ihM hN ihN.
   have hequiv : Γ ⊢ A' ≡ A by eauto using Conv_Equiv.
   have /Equiv_sym hequiv_s := hequiv.
+  have hρe : lookup_good_morphing var_tm (A :: Γ) (A' :: Γ) by  apply lookup_good_id; eauto with wt.
+  have hΓ' : ⊢ A' :: Γ by eauto with wt.
+  move /wr_morphing /(_ var_tm _ hρe hΓ') : ihB.  asimpl.
+  move => [? ihB].
   apply : WR_App; eauto 1 with wt.
-  - move => [:tr0].
-    move : ihB. move/wr_morphing /(_ var_tm). asimpl. apply; last by abstract : tr0; eauto with wt.
-    apply lookup_good_id; eauto.
   - apply : WR_Conv.
     + apply : WR_Lam; eauto.
     + have : Γ ⊢ Pi A0 B ▻+ Pi A B ∈ Univ i by eauto using lh_refl_helper.
@@ -321,16 +340,17 @@ Proof.
 Qed.
 
 Definition lookup_good_morphing2 ρ0 ρ1 Γ Δ :=
-  forall n A, lookup n Γ A -> Δ ⊢ ρ0 n ▻ ρ1 n ∈ A[ρ0].
+  forall n A, lookup n Γ A -> exists B, Δ ⊢ ρ0 n ▻ ρ1 n ∈ B ⇒ A[ρ0].
 
-Lemma good_morphing2_up ρ0 ρ1 A B k Γ Δ
+Lemma good_morphing2_up ρ0 ρ1 A _A B k Γ Δ
   (h : lookup_good_morphing2 ρ0 ρ1 Γ Δ) :
-  Δ ⊢ A[ρ0] ▻ B ∈ Univ k ->
+  Δ ⊢ A[ρ0] ▻ B ∈ _A ⇒ Univ k ->
   lookup_good_morphing2 (up_tm_tm ρ0) (up_tm_tm ρ1) (A :: Γ) (A[ρ0] :: Δ).
 Proof.
   rewrite /lookup_good_morphing => h1.
   inversion 1=>*; subst.
-  - apply WR_Var => /=.
+  - eexists.
+    apply WR_Var => /=.
     + eauto with wt.
     + asimpl. apply : here'. by asimpl.
   - asimpl. rewrite !subst_ren_factor.
