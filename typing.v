@@ -60,10 +60,10 @@ Inductive WtRed : context -> tm -> tm -> tm -> Prop :=
   (*----------------------  *)
   Γ ⊢ App A' B (Lam A M) N ▻ M'[N'..] ∈ B[N..]
 
-| WR_TyUnit Γ i :
+| WR_TyUnit Γ :
   ⊢ Γ ->
   (* ----------- *)
-  Γ ⊢ TyUnit ▻ TyUnit ∈ Univ i
+  Γ ⊢ TyUnit ▻ TyUnit ∈ Univ 0
 
 | WR_TmUnit Γ :
   ⊢ Γ ->
