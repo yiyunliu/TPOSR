@@ -34,9 +34,9 @@ Inductive WtRed : context -> tm -> tm -> tm -> Prop :=
   (* ------------------- *)
   Γ ⊢ Pi A B ▻ Pi A' B' ∈ Univ i
 
-| WR_Lam Γ A A' i B M M' :
+| WR_Lam Γ A A' i B B' M M' :
   Γ ⊢ A ▻ A' ∈ Univ i ->
-  A :: Γ ⊢ B ▻ B ∈ Univ i ->
+  A :: Γ ⊢ B ▻ B' ∈ Univ i ->
   A :: Γ ⊢ M ▻ M' ∈ B ->
   (* ------------------ *)
   Γ ⊢ Lam A M ▻ Lam A' M' ∈ Pi A B
@@ -49,9 +49,9 @@ Inductive WtRed : context -> tm -> tm -> tm -> Prop :=
   (* ------------------------ *)
   Γ ⊢ App B M N ▻ App B' M' N' ∈ B[N..]
 
-| WR_Beta Γ A i A' B M M' N N' :
+| WR_Beta Γ A i A' B B' M M' N N' :
   Γ ⊢ A ▻ A' ∈ Univ i ->
-  A :: Γ ⊢ B ▻ B ∈ Univ i ->
+  A :: Γ ⊢ B ▻ B' ∈ Univ i ->
   A :: Γ ⊢ M ▻ M' ∈ B ->
   Γ ⊢ N ▻ N' ∈ A ->
   (*----------------------  *)
@@ -110,27 +110,27 @@ Inductive WtReds Γ M N A : Prop :=
 where
  "Γ ⊢ a ▻+ b ∈ A" := (WtReds Γ a b A).
 
-Reserved Notation "Γ ⊢ M ≡ N ∈ i" (at level 70, no associativity).
-Inductive WtEquiv Γ M N i : Prop :=
-| WE_Red :
+Reserved Notation "Γ ⊢ M ≡ N" (at level 70, no associativity).
+Inductive WtEquiv Γ M N : Prop :=
+| WE_Red i :
   Γ ⊢ M ▻ N ∈ Univ i ->
   (* ------------------- *)
-  Γ ⊢ M ≡ N ∈ i
-| WE_Exp :
+  Γ ⊢ M ≡ N
+| WE_Exp i :
   Γ ⊢ N ▻ M ∈ Univ i ->
   (* ------------------- *)
-  Γ ⊢ M ≡ N ∈ i
+  Γ ⊢ M ≡ N
 | WE_Trans P :
-  Γ ⊢ M ≡ P ∈ i ->
-  Γ ⊢ P ≡ N ∈ i ->
+  Γ ⊢ M ≡ P ->
+  Γ ⊢ P ≡ N ->
   (* ----------------- *)
-  Γ ⊢ M ≡ N ∈ i
+  Γ ⊢ M ≡ N
 where
-"Γ ⊢ A ≡ B ∈ i" := (WtEquiv Γ A B i).
+"Γ ⊢ A ≡ B" := (WtEquiv Γ A B).
 
 #[export]Hint Constructors WtEquiv WtReds WtRed Wf : wt.
 
-Lemma Equiv_sym Γ A B i (h : Γ ⊢ A ≡ B ∈ i) : Γ ⊢ B ≡ A ∈ i.
+Lemma Equiv_sym Γ A B (h : Γ ⊢ A ≡ B) : Γ ⊢ B ≡ A.
 Proof. elim : h; eauto with wt. Qed.
 
 #[export]Hint Resolve Equiv_sym : wt.
