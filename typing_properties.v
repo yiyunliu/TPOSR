@@ -1,5 +1,10 @@
 Require Export typing.
 
+(* Here's what happens with eta laws *)
+(* Adams 2006 turns out to be a no-op because it fundamentally relies on confluence for an untyped reduction *)
+(* Siles 2012 doesn't work because exchange breaks and it's impossible
+   to show that parallel reduction preserves head forms *)
+(* Adding injectivity and you run into the same problem that the diamond property becomes too weak *)
 Lemma lookup_deter Γ n A A0 : lookup n Γ A -> lookup n Γ A0 -> A = A0.
   move => h. move : A0.
   induction h; hauto lq:on inv:lookup.
