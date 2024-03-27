@@ -1,4 +1,4 @@
-Require Export syntax imports.
+Require Export imports.
 
 Definition context := list tm.
 

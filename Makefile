@@ -1,28 +1,23 @@
-LIBNAME=WR
+SYNTAX_FILE=theories/Autosubst2/syntax.v
+COQMAKEFILE=CoqMakefile
 
-coq: CoqSrc.mk syntax.v
-	$(MAKE) -f CoqSrc.mk
+theories: $(COQMAKEFILE)
+	$(MAKE) -f $^
 
-%.vo: %.v CoqSrc.mk
-	$(MAKE) -f CoqSrc.mk $*.vo
+$(COQMAKEFILE) : $(SYNTAX_FILE)
+	$(COQBIN)coq_makefile -f _CoqProject -o $(COQMAKEFILE)
 
-vos:  CoqSrc.mk
-	@$(MAKE) -f CoqSrc.mk vos
+install: $(COQMAKEFILE)
+	$(MAKE) -f $^ install
 
-%.vos:  %.v CoqSrc.mk
-	@$(MAKE) -f CoqSrc.mk $*.vos
+uninstall: $(COQMAKEFILE)
+	$(MAKE) -f $(COQMAKEFILE) uninstall
 
-syntax.v : syntax.sig
-	as2-exe -i syntax.sig -p UCoq > syntax.v
-	perl -i -pe 's/^(Hint|Instance)/#[export]$1/' syntax.v
-
-_CoqProject : syntax.v *.v
-	{ echo "-R . $(LIBNAME) " ; ls *.v ; } > _CoqProject
-
-CoqSrc.mk: _CoqProject
-	 coq_makefile -arg '-w -variable-collision,-meta-collision,-require-in-module' -f _CoqProject -o CoqSrc.mk
+$(SYNTAX_FILE) : syntax.sig
+	as2-exe -i syntax.sig -p UCoq > $(SYNTAX_FILE)
+	perl -i -pe 's/^(Hint|Instance)/#[export]$1/' $(SYNTAX_FILE)
 
 .PHONY: clean
 clean:
-	rm -f syntax.v
-	test ! -f CoqSrc.mk || ( $(MAKE) -f CoqSrc.mk clean && rm CoqSrc.mk )
+	test ! -f $(COQMAKEFILE) || ( $(MAKE) -f $(COQMAKEFILE) clean && rm $(COQMAKEFILE) )
+	rm -f $(SYNTAX_FILE)
