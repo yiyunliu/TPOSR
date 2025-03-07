@@ -14,8 +14,7 @@ uninstall: $(COQMAKEFILE)
 	$(MAKE) -f $(COQMAKEFILE) uninstall
 
 $(SYNTAX_FILE) : syntax.sig
-	as2-exe -i syntax.sig -p UCoq > $(SYNTAX_FILE)
-	perl -i -pe 's/^(Hint|Instance)/#[export]$1/' $(SYNTAX_FILE)
+	autosubst -f -v ge813 -s ucoq -o $(SYNTAX_FILE) syntax.sig
 
 .PHONY: clean
 clean:

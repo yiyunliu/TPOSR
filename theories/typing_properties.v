@@ -77,6 +77,7 @@ Proof.
       eauto using good_renaming_up;
       eauto using good_renaming_up with wt.
     by asimpl.
+    rewrite -/ren_tm.
     by asimpl.
 Qed.
 
@@ -84,10 +85,10 @@ Definition lookup_good_morphing ρ Γ Δ :=
   forall n A, lookup n Γ A -> Δ ⊢ ρ n ▻ ρ n ∈ A[ρ].
 
 Lemma lookup_good_renaming_shift A Δ:
-  lookup_good_renaming ↑ Δ (A :: Δ).
+  lookup_good_renaming shift Δ (A :: Δ).
 Proof. rewrite /lookup_good_renaming => >. apply there. Qed.
 
-Lemma subst_ren_factor A ρ ξ :  A[ρ >> ren_tm ξ ] = A[ρ]⟨ξ⟩.
+Lemma subst_ren_factor A ρ ξ :  A[funcomp (ren_tm ξ) ρ] = A[ρ]⟨ξ⟩.
 Proof. by asimpl. Qed.
 
 Lemma good_morphing_up ρ k Γ Δ A B
@@ -118,7 +119,8 @@ Proof.
   - hauto q:on use:good_morphing_up db:wt.
   - hauto q:on use:good_morphing_up db:wt.
   - move => *.
-    apply : WR_App'; eauto. by asimpl. qauto l:on use:good_morphing_up db:wt.
+    apply : WR_App'; eauto. rewrite -/subst_tm.
+    by asimpl. qauto l:on use:good_morphing_up db:wt.
   - move => Γ A i A' A0 B M M' N N' hA ihA hA' ihA' hA00 ihA00 hA01 ihA01 hB ihB hM ihM hN ihN ρ Δ hρ hΔ /=.
     apply : WR_Beta'; eauto; cycle 1.
     by asimpl.
@@ -174,12 +176,13 @@ Proof.
   move => k T.
   elim /lookup_inv => _.
   + move => ? ? ? []*. subst. asimpl.
-    apply WR_Conv with (A := A' ⟨↑⟩).
+    apply WR_Conv with (A := A' ⟨shift⟩).
     hauto q:on ctrs:WtRed, lookup.
+    renamify.
     apply : equiv_renaming=>//; last by apply lookup_good_renaming_shift. exact h.
   + move => n A1 Γ0 B0 ? ? []*. subst.
-    asimpl.
-    change (var_tm (↑ n)) with ((var_tm n)⟨↑⟩).
+    asimpl. renamify.
+    change (var_tm (S n)) with ((var_tm n)⟨shift⟩).
     eapply wt_renaming_mutual=>//; last by apply lookup_good_renaming_shift.
     apply : WR_Var; eauto.
     sfirstorder use:Wf_cons_inv.
@@ -285,7 +288,7 @@ Proof.
   - hauto q:on db:wt.
   - hauto q:on use:good_morphing2_up db:wt.
   - hauto q:on use:lookup_good_morphing2_lh_refl, good_morphing2_up db:wt.
-  - move => *.
+  - move => */=.
     apply : WR_App'; eauto. by asimpl. qauto l:on use:good_morphing2_up db:wt.
   - move => Γ A i A' A0 B M M' N N' hA ihA hA' ihA' hA00 ihA00 hA01 ihA01 hB ihB hM ihM hN ihN ρ0 ρ1 Δ hρ hΔ /=.
     apply WR_Beta' with (M' := M'[up_tm_tm ρ1]) (N' := N'[ρ1]) (A0 := A0[ρ0]) (i := i); eauto 3.
