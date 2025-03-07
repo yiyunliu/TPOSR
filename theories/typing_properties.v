@@ -1,4 +1,16 @@
+Require Import imports.
 Require Export typing.
+Set Default Proof Mode "Classic".
+Ltac2 spec_refl () :=
+  List.iter
+    (fun a => match a with
+           | (i, _, _) =>
+               let h := Control.hyp i in
+               try (specialize $h with (1 := eq_refl))
+           end)  (Control.hyps ()).
+
+Ltac spec_refl := ltac2:(Control.enter spec_refl).
+
 
 Lemma here' : forall {A Γ T}, T = A ⟨shift⟩ ->  lookup 0 (A :: Γ) T.
 Proof. move => > ->. by apply here. Qed.
@@ -56,6 +68,14 @@ Lemma WR_Beta' Γ A i A' A0 B M M' N N' P T :
   Γ ⊢ App A' B (Lam A M) N ▻ P ∈ T.
 Proof. move =>> -> ->. apply WR_Beta. Qed.
 
+Lemma WR_Eta' Γ a b A A' i B B' u  :
+  u = Lam A' (App A'⟨shift⟩ B'⟨upRen_tm_tm shift⟩ b⟨shift⟩ (var_tm var_zero)) ->
+  Γ ⊢ A ▻ A' ∈ Univ i ->
+  A :: Γ ⊢ B ▻ B' ∈ Univ i ->
+  Γ ⊢ a ▻ b ∈  Pi A B ->
+  Γ ⊢ a ▻ u ∈ Pi A B.
+Proof. move => ->. apply WR_Eta. Qed.
+
 Lemma wt_renaming_mutual :
   (forall Γ a b A, Γ ⊢ a ▻ b ∈ A -> forall ξ Δ,
         lookup_good_renaming ξ Γ Δ -> Wf Δ -> Δ ⊢ a⟨ξ⟩ ▻ b⟨ξ⟩ ∈ A⟨ξ⟩ ) /\
@@ -79,7 +99,20 @@ Proof.
     by asimpl.
     rewrite -/ren_tm.
     by asimpl.
+  - move => Γ a b A A' i B B' hA ihA hB ihB ha iha ξ Δ hξ hΔ /=.
+    apply : WR_Eta'; eauto using good_renaming_up with wt.
+    by asimpl.
 Qed.
+
+Lemma wt_renaming :
+  forall Γ a b A, Γ ⊢ a ▻ b ∈ A -> forall ξ Δ,
+      lookup_good_renaming ξ Γ Δ -> Wf Δ -> Δ ⊢ a⟨ξ⟩ ▻ b⟨ξ⟩ ∈ A⟨ξ⟩ .
+Proof. hauto l:on use:wt_renaming_mutual. Qed.
+
+Lemma wt_renaming_univ :
+  forall Γ a b i, Γ ⊢ a ▻ b ∈ Univ i -> forall ξ Δ,
+      lookup_good_renaming ξ Γ Δ -> Wf Δ -> Δ ⊢ a⟨ξ⟩ ▻ b⟨ξ⟩ ∈ Univ i.
+Proof. hauto l:on use:wt_renaming. Qed.
 
 Definition lookup_good_morphing ρ Γ Δ :=
   forall n A, lookup n Γ A -> Δ ⊢ ρ n ▻ ρ n ∈ A[ρ].
@@ -125,6 +158,11 @@ Proof.
     apply : WR_Beta'; eauto; cycle 1.
     by asimpl.
     hauto lq:on use:good_morphing_up db:wt.
+    hauto lq:on use:good_morphing_up db:wt.
+    by asimpl.
+  - move => Γ a b A A' i B B' hA ihA hB ihB ha iha ρ Δ hρ hΔ /=.
+    apply : WR_Eta'; eauto using good_morphing_up with wt; cycle 1.
+    apply ihB. hauto lq:on use:good_morphing_up db:wt.
     hauto lq:on use:good_morphing_up db:wt.
     by asimpl.
 Qed.
@@ -300,6 +338,10 @@ Proof.
     + sfirstorder use:lookup_good_morphing2_lh_refl.
     + hauto lq:on use:good_morphing2_up, lookup_good_morphing2_lh_refl db:wt.
     + hauto lq:on use:good_morphing2_up, lookup_good_morphing2_lh_refl db:wt.
+  - move => Γ a b A A' i B B' hA ihA hB ihB ha iha ρ0 ρ1 Δ hρ hΔ /=.
+    apply : WR_Eta'; eauto; cycle 1.
+    qauto l:on use:good_morphing2_up db:wt.
+    by asimpl.
   - qauto l:on use:lookup_good_morphing2_lh_refl, WR_Conv db:wt.
   - qauto l:on use:lookup_good_morphing2_lh_refl, WR_Conv db:wt.
   - eauto using lookup_good_morphing2_lh_refl with wt.
@@ -349,6 +391,23 @@ Proof.
     apply : WR_cong; eauto.
     apply : WE_Exp.
     apply /WR_cong : hB hN.
+  - move => Γ a b A A' i B B' hA ihA hB ihB ha iha /=.
+    apply : WR_Conv; eauto with wt.
+    apply : WR_Lam; eauto using Ctx_conv with wt.
+    have ? : ⊢ A' :: Γ by hauto lq:on db:wt.
+    have ? : ⊢ A :: Γ by hauto lq:on db:wt.
+    have ? : ⊢ A' ⟨ shift ⟩ :: A' :: Γ by hauto use:wt_renaming_univ, lookup_good_renaming_shift lq:on db:wt.
+    apply : WR_App'. have hE : B' = subst_tm ids B' by asimpl.
+    asimpl.
+    rewrite {1}hE.
+    apply ext_tm. case => //=.
+    apply : wt_renaming_univ; eauto using lookup_good_renaming_shift.
+    apply : wt_renaming_univ; cycle 1. eauto using lookup_good_renaming_shift, good_renaming_up.
+    done.
+    apply : Ctx_conv; eauto with wt.
+    set U := Pi _ _. change U with (Pi A' B')⟨shift⟩.
+    apply : wt_renaming; eauto with wt. apply lookup_good_renaming_shift.
+    apply WR_Var; eauto. apply here.
 Qed.
 
 Lemma lookup_wf Γ n A (h : ⊢ Γ) (h0 : lookup n Γ A) : exists i, Γ ⊢ A ▻ A ∈ Univ i.
@@ -371,32 +430,21 @@ Proof.
     apply /Wf_cons : h1.
 Qed.
 
-(* Adding Unit eta naively breaks inversion. Expand only when term is neutral? *)
-(* Can the weakened inversion principle still allow us to derive the diamond property? *)
-(* We can include the unit case still, but what properties can we recover? Diamond? Confluence? *)
-(* Conjecture: The only thing that's compromised is the strength of
-   progress + preservation. I think we can still prove it, but it
-   doesn't tell us much about safety (e.g. how do we know that two
-   booleans won't step into unit and becomes equal?) *)
-(* For the diamond property to be provable, it is important that it
-does not imply consistency *)
-(* Actually, diamond doesn't even imply the consistency of the
-equational theory. It's impossible to rule out Pi Bool Nat = () = Pi Nat Bool *)
-(* What about removing exp? Expansion postponement? *)
-(* Can we give a direct proof of diamond without the exp rule? *)
-(* Can we prove exp a posteriori? *)
-(* Would the system without exp be helpful as an intermediate system
-for logical relations? *)
 Lemma Univ_inv Γ i N T (h : Γ ⊢ Univ i ▻ N ∈ T) :
   N = Univ i /\ Γ ⊢ T ≡ Univ (S i).
 Proof.
   move E : (Univ i) h => M h.
   move : i E.
-  elim : Γ M N T / h=>//;hauto lq:on rew:off db:wt.
-Qed.
+  elim : Γ M N T / h=>//; try hauto lq:on rew:off db:wt.
+  move => Γ a b A A' i B B' hA ihA hB ihB ha iha i0 ?. subst.
+  specialize iha with (1 := eq_refl).
+  move : iha => [? hU]. subst.
+  (* Impossible by lambda FP *)
+  admit.
+Admitted.
 
 Lemma Var_inv Γ n N T (h : Γ ⊢ var_tm n ▻ N ∈ T) :
-  N = var_tm n /\ exists A, lookup n Γ A /\ Γ ⊢ T ≡ A.
+  exists A, lookup n Γ A /\ Γ ⊢ T ≡ A.
 Proof.
   move E : (var_tm n) h => M h.
   move : n E.
@@ -413,13 +461,17 @@ Proof.
   move : A B E.
   elim : Γ M N T / h=>//.
   - hauto lq:on use:Wt_Wf_mutual db:wt.
+  - move => Γ a b A A' i B B' hA _ hB _ ha iha A0 B0 ?. subst.
+    spec_refl.
+    move : iha => [A1][B1][i0][?][ihA][ihB]hU. subst.
+    admit.
   - hauto lq:on rew:off db:wt.
   - hauto lq:on rew:off db:wt.
-Qed.
+Admitted.
 
 Lemma Lam_inv Γ A M N T (h : Γ ⊢ Lam A M ▻ N ∈ T) :
   exists A' M' B i,
-    N = Lam A' M' /\
+    (* N = Lam A' M' /\ *)
     Γ ⊢ A ▻ A' ∈ Univ i /\
     A::Γ ⊢ B ▻ B ∈ Univ i /\
     A::Γ ⊢ M ▻ M' ∈ B /\
@@ -438,9 +490,9 @@ Lemma App_inv Γ P U B Q N T (h : Γ ⊢ App U B P Q ▻ N ∈ T) :
     Γ ⊢ A ▻ A' ∈ Univ i /\ A::Γ ⊢ B ▻B' ∈ Univ i /\ Γ ⊢ Q ▻ Q' ∈ A /\
     Γ ⊢ T ≡ B[Q..] /\
     (* App case *)
-    ((exists P', U = A /\ Γ ⊢ P ▻ P' ∈ Pi A B /\ N = App A' B' P' Q') \/
+    ((exists P', U = A /\ Γ ⊢ P ▻ P' ∈ Pi A B) \/
     (* Beta case *)
-     (exists A0 A'' R R', U = A''/\ P = Lam A R /\ A::Γ ⊢ R ▻ R' ∈ B /\ N = R'[Q'..] /\
+     (exists A0 A'' R R', U = A''/\ P = Lam A R /\ A::Γ ⊢ R ▻ R' ∈ B /\
                          Γ ⊢ A0 ▻+ A'' ∈ Univ i /\ Γ ⊢ A0 ▻+ A ∈ Univ i)).
 Proof.
   move E : (App U B P Q) h => M h.
@@ -471,7 +523,8 @@ Lemma exchange : forall Γ M N A P B,
 Proof.
   move => Γ M N A + + h.
   elim : Γ M N A / h; eauto 2.
-  - hauto lq:on rew:off use:Var_inv.
+  - move => Γ i A hΓ hA P B.
+    move /Var_inv => [A0][h0 h1]. hauto lq:on use:Equiv_sym, WR_Conv, WR_Var.
   - hauto l:on use:Univ_inv.
   - move => Γ i A A' B B' hA ihA hB ihB P B0.
     move /Prod_inv.
@@ -479,7 +532,7 @@ Proof.
     apply : WR_Conv'; eauto.
     hauto lq:on db:wt.
   - move => Γ A A' i B M M' h ihA hB ihB hM ihM P B0 /Lam_inv.
-    move =>[A'0][M'0][B1][i0][?][?][?][?]?. subst.
+    move =>[A'0][M'0][B1][i0][?][?][?]?.
     apply : WR_Conv'; eauto.
     move{i h hB}. eauto with wt.
   - move => Γ A A' i B B' M M' N N' hA ihA hB ihB hM ihM hN ihN P B0 /App_inv.
@@ -492,6 +545,9 @@ Proof.
     move => [A1][A'0][B'][Q'][i0][?][?][?][?]_.
     apply : WR_Conv'; eauto.
     hauto lq:on db:wt.
+  - move => Γ a b A A' i B B' hA ihA hB ihB ha iha a' U hau.
+    apply : WR_Conv; eauto with wt.
+    move : iha hau => /[apply].
 Qed.
 
 Lemma exchange_multi_step : forall Γ M N P A B,

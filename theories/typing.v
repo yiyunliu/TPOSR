@@ -1,5 +1,6 @@
 Require Export imports.
 
+Set Default Proof Mode "Classic".
 Definition context := list tm.
 
 Inductive lookup : nat -> context -> tm -> Prop :=
@@ -59,6 +60,12 @@ Inductive WtRed : context -> tm -> tm -> tm -> Prop :=
   Γ ⊢ N ▻ N' ∈ A ->
   (*----------------------  *)
   Γ ⊢ App A' B (Lam A M) N ▻ M'[N'..] ∈ B[N..]
+
+| WR_Eta Γ a b A A' i B B'  :
+  Γ ⊢ A ▻ A' ∈ Univ i ->
+  A :: Γ ⊢ B ▻ B' ∈ Univ i ->
+  Γ ⊢ a ▻ b ∈  Pi A B ->
+  Γ ⊢ a ▻ Lam A' (App (A'⟨shift⟩) (B'⟨upRen_tm_tm shift⟩) (b⟨shift⟩) (var_tm var_zero)) ∈ Pi A B
 
 | WR_Red Γ M N A B i :
   Γ ⊢ M ▻ N ∈ A ->
