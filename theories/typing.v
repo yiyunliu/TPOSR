@@ -48,24 +48,22 @@ Inductive WtRed : context -> tm -> tm -> tm -> Prop :=
   Γ ⊢ M ▻ M' ∈ Pi A B ->
   Γ ⊢ N ▻ N' ∈ A ->
   (* ------------------------ *)
-  Γ ⊢ App A B M N ▻ App A' B' M' N' ∈ B[N..]
+  Γ ⊢ App B M N ▻ App B' M' N' ∈ B[N..]
 
-| WR_Beta Γ A i A' A0 B M M' N N' :
+| WR_Beta Γ A i A' B B' M M' N N' :
   Γ ⊢ A ▻ A ∈ Univ i ->
   Γ ⊢ A' ▻ A' ∈ Univ i ->
-  Γ ⊢ A0 ▻+ A ∈ Univ i ->
-  Γ ⊢ A0 ▻+ A' ∈ Univ i ->
-  A :: Γ ⊢ B ▻ B ∈ Univ i ->
+  A :: Γ ⊢ B ▻ B' ∈ Univ i ->
   A :: Γ ⊢ M ▻ M' ∈ B ->
   Γ ⊢ N ▻ N' ∈ A ->
   (*----------------------  *)
-  Γ ⊢ App A' B (Lam A M) N ▻ M'[N'..] ∈ B[N..]
+  Γ ⊢ App B (Lam A M) N ▻ M'[N'..] ∈ B[N..]
 
 | WR_Eta Γ a b A A' i B B'  :
   Γ ⊢ A ▻ A' ∈ Univ i ->
   A :: Γ ⊢ B ▻ B' ∈ Univ i ->
   Γ ⊢ a ▻ b ∈  Pi A B ->
-  Γ ⊢ a ▻ Lam A' (App (A'⟨shift⟩) (B'⟨upRen_tm_tm shift⟩) (b⟨shift⟩) (var_tm var_zero)) ∈ Pi A B
+  Γ ⊢ a ▻ Lam A' (App (B'⟨upRen_tm_tm shift⟩) (b⟨shift⟩) (var_tm var_zero)) ∈ Pi A B
 
 | WR_Red Γ M N A B i :
   Γ ⊢ M ▻ N ∈ A ->

@@ -51,25 +51,23 @@ Lemma WR_App' Γ A A' i B B' M M' N N' T :
   Γ ⊢ M ▻ M' ∈ Pi A B ->
   Γ ⊢ N ▻ N' ∈ A ->
   (* ------------------------ *)
-  Γ ⊢ App A B M N ▻ App A' B' M' N' ∈ T.
+  Γ ⊢ App B M N ▻ App B' M' N' ∈ T.
 Proof. move =>> ->. apply WR_App. Qed.
 
-Lemma WR_Beta' Γ A i A' A0 B M M' N N' P T :
+Lemma WR_Beta' Γ A i A' B B' M M' N N' P T :
   P = M'[N'..] ->
   T = B[N..] ->
   Γ ⊢ A ▻ A ∈ Univ i ->
   Γ ⊢ A' ▻ A' ∈ Univ i ->
-  Γ ⊢ A0 ▻+ A ∈ Univ i ->
-  Γ ⊢ A0 ▻+ A' ∈ Univ i ->
-  A :: Γ ⊢ B ▻ B ∈ Univ i ->
+  A :: Γ ⊢ B ▻ B' ∈ Univ i ->
   A :: Γ ⊢ M ▻ M' ∈ B ->
   Γ ⊢ N ▻ N' ∈ A ->
   (*----------------------  *)
-  Γ ⊢ App A' B (Lam A M) N ▻ P ∈ T.
+  Γ ⊢ App B (Lam A M) N ▻ P ∈ T.
 Proof. move =>> -> ->. apply WR_Beta. Qed.
 
 Lemma WR_Eta' Γ a b A A' i B B' u  :
-  u = Lam A' (App A'⟨shift⟩ B'⟨upRen_tm_tm shift⟩ b⟨shift⟩ (var_tm var_zero)) ->
+  u = Lam A' (App B'⟨upRen_tm_tm shift⟩ b⟨shift⟩ (var_tm var_zero)) ->
   Γ ⊢ A ▻ A' ∈ Univ i ->
   A :: Γ ⊢ B ▻ B' ∈ Univ i ->
   Γ ⊢ a ▻ b ∈  Pi A B ->
@@ -88,7 +86,7 @@ Proof.
   - hauto q:on db:wt.
   - hauto q:on use:good_renaming_up db:wt.
   - hauto q:on use:good_renaming_up db:wt.
-  - move => */=. apply : WR_App'; eauto using good_renaming_up with wt.
+  - move => */=. apply : WR_App'; eauto; eauto using good_renaming_up with wt.
     by asimpl.
   - move => *. apply : WR_Beta';
       (* The two eautos is *NOT* a typo. Need to suppress the use of
@@ -100,7 +98,7 @@ Proof.
     rewrite -/ren_tm.
     by asimpl.
   - move => Γ a b A A' i B B' hA ihA hB ihB ha iha ξ Δ hξ hΔ /=.
-    apply : WR_Eta'; eauto using good_renaming_up with wt.
+    apply : WR_Eta'; eauto; eauto using good_renaming_up with wt; cycle 1.
     by asimpl.
 Qed.
 
@@ -154,7 +152,7 @@ Proof.
   - move => *.
     apply : WR_App'; eauto. rewrite -/subst_tm.
     by asimpl. qauto l:on use:good_morphing_up db:wt.
-  - move => Γ A i A' A0 B M M' N N' hA ihA hA' ihA' hA00 ihA00 hA01 ihA01 hB ihB hM ihM hN ihN ρ Δ hρ hΔ /=.
+  - move => Γ A i A'  B B' M M' N N' hA ihA hA' ihA' hB ihB hM ihM hN ihN ρ Δ hρ hΔ /=.
     apply : WR_Beta'; eauto; cycle 1.
     by asimpl.
     hauto lq:on use:good_morphing_up db:wt.
@@ -272,21 +270,6 @@ Lemma lh_refl_mutual :
   (forall Γ, ⊢ Γ -> True).
 Proof.
   apply wt_mutual_ind=>//; eauto with wt.
-  move => Γ A i A' A0 B M M' N N' h0 _  h1 _ hA00 ihA00 hA01 ihA01 hB ihB hM ihM hN ihN.
-  have hequiv : Γ ⊢ A' ≡ A by eauto using Conv_Equiv.
-  have /Equiv_sym hequiv_s := hequiv.
-  apply : WR_App; eauto 1 with wt.
-  - move => [:tr0].
-    move : ihB. move/wr_morphing /(_ var_tm). asimpl. apply; last by abstract : tr0; eauto with wt.
-    apply lookup_good_id; eauto.
-  - apply : WR_Conv.
-    + apply : WR_Lam; eauto.
-    + have : Γ ⊢ Pi A0 B ▻+ Pi A B ∈ Univ i by eauto using lh_refl_helper.
-      move /Ctx_conv /(_ ltac:(sfirstorder) ltac:(hauto lq:on db:wt)) in hB.
-      have : Γ ⊢ Pi A0 B ▻+ Pi A' B ∈ Univ i by eauto using lh_refl_helper.
-      move => /wrs_Equiv + /wrs_Equiv /Equiv_sym.
-      move /[swap]. apply WE_Trans.
-  - apply : WR_Conv; eauto.
 Qed.
 
 Definition lookup_good_morphing2 ρ0 ρ1 Γ Δ :=
@@ -328,14 +311,14 @@ Proof.
   - hauto q:on use:lookup_good_morphing2_lh_refl, good_morphing2_up db:wt.
   - move => */=.
     apply : WR_App'; eauto. by asimpl. qauto l:on use:good_morphing2_up db:wt.
-  - move => Γ A i A' A0 B M M' N N' hA ihA hA' ihA' hA00 ihA00 hA01 ihA01 hB ihB hM ihM hN ihN ρ0 ρ1 Δ hρ hΔ /=.
-    apply WR_Beta' with (M' := M'[up_tm_tm ρ1]) (N' := N'[ρ1]) (A0 := A0[ρ0]) (i := i); eauto 3.
+  - move => Γ A i A' B B' M M' N N' hA ihA hA' ihA' hB ihB hM ihM hN ihN ρ0 ρ1 Δ hρ hΔ /=.
+    eapply WR_Beta' with (M' := M'[up_tm_tm ρ1]) (N' := N'[ρ1]) (i := i); eauto 3.
     + by asimpl.
     + by asimpl.
     + qauto l:on db:wt use:lh_refl_mutual.
     + hauto lq:on rew:off db:wt use:lh_refl_mutual.
-    + sfirstorder use:lookup_good_morphing2_lh_refl.
-    + sfirstorder use:lookup_good_morphing2_lh_refl.
+    (* + sfirstorder use:lookup_good_morphing2_lh_refl. *)
+    (* + sfirstorder use:lookup_good_morphing2_lh_refl. *)
     + hauto lq:on use:good_morphing2_up, lookup_good_morphing2_lh_refl db:wt.
     + hauto lq:on use:good_morphing2_up, lookup_good_morphing2_lh_refl db:wt.
   - move => Γ a b A A' i B B' hA ihA hB ihB ha iha ρ0 ρ1 Δ hρ hΔ /=.
@@ -386,24 +369,27 @@ Proof.
     eauto using Ctx_conv with wt.
     apply : WE_Exp.
     apply /WR_cong : hB hN.
-  - move => Γ A i A' A0 B M M' N N' hA ihA hA' ihA' hA00 ihA00 hA01 ihA01 hB _ hM ihM hN ihN.
+  - move => Γ A i A' B B' M M' N N' hA ihA hA' ihA' hB ihB hM ihM hN ihN.
     apply : WR_Conv.
     apply : WR_cong; eauto.
     apply : WE_Exp.
+    eapply lh_refl_mutual in hB.
     apply /WR_cong : hB hN.
   - move => Γ a b A A' i B B' hA ihA hB ihB ha iha /=.
-    apply : WR_Conv; eauto with wt.
-    apply : WR_Lam; eauto using Ctx_conv with wt.
+    apply : WR_Conv; eauto; eauto with wt.
+    apply : WR_Lam; eauto; eauto using Ctx_conv with wt.
     have ? : ⊢ A' :: Γ by hauto lq:on db:wt.
     have ? : ⊢ A :: Γ by hauto lq:on db:wt.
     have ? : ⊢ A' ⟨ shift ⟩ :: A' :: Γ by hauto use:wt_renaming_univ, lookup_good_renaming_shift lq:on db:wt.
-    apply : WR_App'. have hE : B' = subst_tm ids B' by asimpl.
+    apply : WR_App'; eauto.
+    have hE : B' = subst_tm ids B' by asimpl.
     asimpl.
     rewrite {1}hE.
     apply ext_tm. case => //=.
-    apply : wt_renaming_univ; eauto using lookup_good_renaming_shift.
+    eapply wt_renaming_univ. apply ihA. by eauto using lookup_good_renaming_shift.
+    by eauto.
     apply : wt_renaming_univ; cycle 1. eauto using lookup_good_renaming_shift, good_renaming_up.
-    done.
+    eauto.
     apply : Ctx_conv; eauto with wt.
     set U := Pi _ _. change U with (Pi A' B')⟨shift⟩.
     apply : wt_renaming; eauto with wt. apply lookup_good_renaming_shift.
@@ -485,18 +471,18 @@ Proof.
   - hauto lq:on rew:off db:wt.
 Qed.
 
-Lemma App_inv Γ P U B Q N T (h : Γ ⊢ App U B P Q ▻ N ∈ T) :
+Lemma App_inv Γ P B Q N T (h : Γ ⊢ App B P Q ▻ N ∈ T) :
   exists A A' B' Q' i,
     Γ ⊢ A ▻ A' ∈ Univ i /\ A::Γ ⊢ B ▻B' ∈ Univ i /\ Γ ⊢ Q ▻ Q' ∈ A /\
     Γ ⊢ T ≡ B[Q..] /\
     (* App case *)
-    ((exists P', U = A /\ Γ ⊢ P ▻ P' ∈ Pi A B) \/
+    ((exists P', Γ ⊢ P ▻ P' ∈ Pi A B) \/
     (* Beta case *)
-     (exists A0 A'' R R', U = A''/\ P = Lam A R /\ A::Γ ⊢ R ▻ R' ∈ B /\
+     (exists A0 A'' R R', P = Lam A R /\ A::Γ ⊢ R ▻ R' ∈ B /\
                          Γ ⊢ A0 ▻+ A'' ∈ Univ i /\ Γ ⊢ A0 ▻+ A ∈ Univ i)).
 Proof.
-  move E : (App U B P Q) h => M h.
-  move : U B P Q E.
+  move E : (App B P Q) h => M h.
+  move : B P Q E.
   elim : Γ M N T / h=>//.
   - move => Γ A A' i B B' M M' N N' hA _ hB _ hM _ hN _ >[]*. subst.
     exists A, A', B', N', i.
@@ -506,63 +492,20 @@ Proof.
       move /WR_cong: hB hN. repeat move/[apply].
       apply /(proj1 lh_refl_mutual).
     + sfirstorder.
-  - move => Γ A i A' A0 B M M' N N' hA _ hA' _ hA00 hA01 hB _ hM _ hN _ > []*.
+  - move => Γ A i A' B B' M M' N N' hA _ hA' _ hB _ hM _ hN _ > []*.
     subst. exists A, A, B, N', i.
     repeat split => //.
     (* Factor out the first bullet *)
+    + by eapply lh_refl_mutual in hB.
     + apply : WE_Red.
       move /WR_cong: hB hN. repeat move/[apply].
       apply /(proj1 lh_refl_mutual).
-    + hauto lq:on.
+    + qauto use:lh_refl_mutual,WR_Lam.
   - hauto lq:on rew:off db:wt.
   - hauto lq:on rew:off db:wt.
 Qed.
 
-Lemma exchange : forall Γ M N A P B,
-    Γ ⊢ M ▻ N ∈ A -> Γ ⊢ M ▻ P ∈ B -> Γ ⊢ M ▻ N ∈ B.
-Proof.
-  move => Γ M N A + + h.
-  elim : Γ M N A / h; eauto 2.
-  - move => Γ i A hΓ hA P B.
-    move /Var_inv => [A0][h0 h1]. hauto lq:on use:Equiv_sym, WR_Conv, WR_Var.
-  - hauto l:on use:Univ_inv.
-  - move => Γ i A A' B B' hA ihA hB ihB P B0.
-    move /Prod_inv.
-    move => [A0][B1][i0][hA0][hB1][?]h.
-    apply : WR_Conv'; eauto.
-    hauto lq:on db:wt.
-  - move => Γ A A' i B M M' h ihA hB ihB hM ihM P B0 /Lam_inv.
-    move =>[A'0][M'0][B1][i0][?][?][?]?.
-    apply : WR_Conv'; eauto.
-    move{i h hB}. eauto with wt.
-  - move => Γ A A' i B B' M M' N N' hA ihA hB ihB hM ihM hN ihN P B0 /App_inv.
-    move => [A0][A'0][B'0][Q'][i0][?][?][?][?]_.
-    apply : WR_Conv'; eauto.
-    hauto lq:on db:wt.
-  - move => Γ A i A' A0 B M M' N N' hA ihA hA' ihA' hA0 ihA0 hA0' ihA0' hM ihM hN ihN P B0 /App_inv.
-    (* Turns out the very cursed or condition isn't needed for either
-    of the App cases *)
-    move => [A1][A'0][B'][Q'][i0][?][?][?][?]_.
-    apply : WR_Conv'; eauto.
-    hauto lq:on db:wt.
-  - move => Γ a b A A' i B B' hA ihA hB ihB ha iha a' U hau.
-    apply : WR_Conv; eauto with wt.
-    move : iha hau => /[apply].
-Qed.
 
-Lemma exchange_multi_step : forall Γ M N P A B,
-  Γ ⊢ M ▻+ N ∈ A -> Γ ⊢ M ▻ P ∈ B -> Γ ⊢ M ▻+ N ∈ B.
-Proof.
-  move => Γ M N + A + h.
-  elim : Γ M N A / h.
-  - hauto lq:on use:exchange db:wt.
-  - move => Γ M N P A h0 h1 ih P0 B h2.
-    move => [:h3].
-    apply : WRs_Trans.
-    abstract : h3;  apply /exchange :h0 h2.
-    move /(proj1 rh_refl_mutual) in h3.
-    eauto.
-Qed.
 
 Lemma Prod_cong_stage0 Γ A0 A i B :
   Γ ⊢ A0 ▻+ A ∈ Univ i ->

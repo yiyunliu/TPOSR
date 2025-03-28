@@ -9,7 +9,7 @@ Inductive tm : Type :=
   | var_tm : nat -> tm
   | Univ : nat -> tm
   | Lam : tm -> tm -> tm
-  | App : tm -> tm -> tm -> tm -> tm
+  | App : tm -> tm -> tm -> tm
   | Pi : tm -> tm -> tm.
 
 Lemma congr_Univ {s0 : nat} {t0 : nat} (H0 : s0 = t0) : Univ s0 = Univ t0.
@@ -24,16 +24,12 @@ exact (eq_trans (eq_trans eq_refl (ap (fun x => Lam x s1) H0))
          (ap (fun x => Lam t0 x) H1)).
 Qed.
 
-Lemma congr_App {s0 : tm} {s1 : tm} {s2 : tm} {s3 : tm} {t0 : tm} {t1 : tm}
-  {t2 : tm} {t3 : tm} (H0 : s0 = t0) (H1 : s1 = t1) (H2 : s2 = t2)
-  (H3 : s3 = t3) : App s0 s1 s2 s3 = App t0 t1 t2 t3.
+Lemma congr_App {s0 : tm} {s1 : tm} {s2 : tm} {t0 : tm} {t1 : tm} {t2 : tm}
+  (H0 : s0 = t0) (H1 : s1 = t1) (H2 : s2 = t2) : App s0 s1 s2 = App t0 t1 t2.
 Proof.
 exact (eq_trans
-         (eq_trans
-            (eq_trans (eq_trans eq_refl (ap (fun x => App x s1 s2 s3) H0))
-               (ap (fun x => App t0 x s2 s3) H1))
-            (ap (fun x => App t0 t1 x s3) H2))
-         (ap (fun x => App t0 t1 t2 x) H3)).
+         (eq_trans (eq_trans eq_refl (ap (fun x => App x s1 s2) H0))
+            (ap (fun x => App t0 x s2) H1)) (ap (fun x => App t0 t1 x) H2)).
 Qed.
 
 Lemma congr_Pi {s0 : tm} {s1 : tm} {t0 : tm} {t1 : tm} (H0 : s0 = t0)
@@ -53,9 +49,8 @@ Fixpoint ren_tm (xi_tm : nat -> nat) (s : tm) {struct s} : tm :=
   | var_tm s0 => var_tm (xi_tm s0)
   | Univ s0 => Univ s0
   | Lam s0 s1 => Lam (ren_tm xi_tm s0) (ren_tm (upRen_tm_tm xi_tm) s1)
-  | App s0 s1 s2 s3 =>
-      App (ren_tm xi_tm s0) (ren_tm (upRen_tm_tm xi_tm) s1) (ren_tm xi_tm s2)
-        (ren_tm xi_tm s3)
+  | App s0 s1 s2 =>
+      App (ren_tm (upRen_tm_tm xi_tm) s0) (ren_tm xi_tm s1) (ren_tm xi_tm s2)
   | Pi s0 s1 => Pi (ren_tm xi_tm s0) (ren_tm (upRen_tm_tm xi_tm) s1)
   end.
 
@@ -69,9 +64,9 @@ Fixpoint subst_tm (sigma_tm : nat -> tm) (s : tm) {struct s} : tm :=
   | var_tm s0 => sigma_tm s0
   | Univ s0 => Univ s0
   | Lam s0 s1 => Lam (subst_tm sigma_tm s0) (subst_tm (up_tm_tm sigma_tm) s1)
-  | App s0 s1 s2 s3 =>
-      App (subst_tm sigma_tm s0) (subst_tm (up_tm_tm sigma_tm) s1)
-        (subst_tm sigma_tm s2) (subst_tm sigma_tm s3)
+  | App s0 s1 s2 =>
+      App (subst_tm (up_tm_tm sigma_tm) s0) (subst_tm sigma_tm s1)
+        (subst_tm sigma_tm s2)
   | Pi s0 s1 => Pi (subst_tm sigma_tm s0) (subst_tm (up_tm_tm sigma_tm) s1)
   end.
 
@@ -94,10 +89,9 @@ subst_tm sigma_tm s = s :=
   | Lam s0 s1 =>
       congr_Lam (idSubst_tm sigma_tm Eq_tm s0)
         (idSubst_tm (up_tm_tm sigma_tm) (upId_tm_tm _ Eq_tm) s1)
-  | App s0 s1 s2 s3 =>
-      congr_App (idSubst_tm sigma_tm Eq_tm s0)
-        (idSubst_tm (up_tm_tm sigma_tm) (upId_tm_tm _ Eq_tm) s1)
-        (idSubst_tm sigma_tm Eq_tm s2) (idSubst_tm sigma_tm Eq_tm s3)
+  | App s0 s1 s2 =>
+      congr_App (idSubst_tm (up_tm_tm sigma_tm) (upId_tm_tm _ Eq_tm) s0)
+        (idSubst_tm sigma_tm Eq_tm s1) (idSubst_tm sigma_tm Eq_tm s2)
   | Pi s0 s1 =>
       congr_Pi (idSubst_tm sigma_tm Eq_tm s0)
         (idSubst_tm (up_tm_tm sigma_tm) (upId_tm_tm _ Eq_tm) s1)
@@ -123,11 +117,11 @@ ren_tm xi_tm s = ren_tm zeta_tm s :=
       congr_Lam (extRen_tm xi_tm zeta_tm Eq_tm s0)
         (extRen_tm (upRen_tm_tm xi_tm) (upRen_tm_tm zeta_tm)
            (upExtRen_tm_tm _ _ Eq_tm) s1)
-  | App s0 s1 s2 s3 =>
-      congr_App (extRen_tm xi_tm zeta_tm Eq_tm s0)
+  | App s0 s1 s2 =>
+      congr_App
         (extRen_tm (upRen_tm_tm xi_tm) (upRen_tm_tm zeta_tm)
-           (upExtRen_tm_tm _ _ Eq_tm) s1) (extRen_tm xi_tm zeta_tm Eq_tm s2)
-        (extRen_tm xi_tm zeta_tm Eq_tm s3)
+           (upExtRen_tm_tm _ _ Eq_tm) s0) (extRen_tm xi_tm zeta_tm Eq_tm s1)
+        (extRen_tm xi_tm zeta_tm Eq_tm s2)
   | Pi s0 s1 =>
       congr_Pi (extRen_tm xi_tm zeta_tm Eq_tm s0)
         (extRen_tm (upRen_tm_tm xi_tm) (upRen_tm_tm zeta_tm)
@@ -155,11 +149,11 @@ subst_tm sigma_tm s = subst_tm tau_tm s :=
       congr_Lam (ext_tm sigma_tm tau_tm Eq_tm s0)
         (ext_tm (up_tm_tm sigma_tm) (up_tm_tm tau_tm) (upExt_tm_tm _ _ Eq_tm)
            s1)
-  | App s0 s1 s2 s3 =>
-      congr_App (ext_tm sigma_tm tau_tm Eq_tm s0)
+  | App s0 s1 s2 =>
+      congr_App
         (ext_tm (up_tm_tm sigma_tm) (up_tm_tm tau_tm) (upExt_tm_tm _ _ Eq_tm)
-           s1) (ext_tm sigma_tm tau_tm Eq_tm s2)
-        (ext_tm sigma_tm tau_tm Eq_tm s3)
+           s0) (ext_tm sigma_tm tau_tm Eq_tm s1)
+        (ext_tm sigma_tm tau_tm Eq_tm s2)
   | Pi s0 s1 =>
       congr_Pi (ext_tm sigma_tm tau_tm Eq_tm s0)
         (ext_tm (up_tm_tm sigma_tm) (up_tm_tm tau_tm) (upExt_tm_tm _ _ Eq_tm)
@@ -183,12 +177,12 @@ Fixpoint compRenRen_tm (xi_tm : nat -> nat) (zeta_tm : nat -> nat)
       congr_Lam (compRenRen_tm xi_tm zeta_tm rho_tm Eq_tm s0)
         (compRenRen_tm (upRen_tm_tm xi_tm) (upRen_tm_tm zeta_tm)
            (upRen_tm_tm rho_tm) (up_ren_ren _ _ _ Eq_tm) s1)
-  | App s0 s1 s2 s3 =>
-      congr_App (compRenRen_tm xi_tm zeta_tm rho_tm Eq_tm s0)
+  | App s0 s1 s2 =>
+      congr_App
         (compRenRen_tm (upRen_tm_tm xi_tm) (upRen_tm_tm zeta_tm)
-           (upRen_tm_tm rho_tm) (up_ren_ren _ _ _ Eq_tm) s1)
+           (upRen_tm_tm rho_tm) (up_ren_ren _ _ _ Eq_tm) s0)
+        (compRenRen_tm xi_tm zeta_tm rho_tm Eq_tm s1)
         (compRenRen_tm xi_tm zeta_tm rho_tm Eq_tm s2)
-        (compRenRen_tm xi_tm zeta_tm rho_tm Eq_tm s3)
   | Pi s0 s1 =>
       congr_Pi (compRenRen_tm xi_tm zeta_tm rho_tm Eq_tm s0)
         (compRenRen_tm (upRen_tm_tm xi_tm) (upRen_tm_tm zeta_tm)
@@ -217,12 +211,12 @@ subst_tm tau_tm (ren_tm xi_tm s) = subst_tm theta_tm s :=
       congr_Lam (compRenSubst_tm xi_tm tau_tm theta_tm Eq_tm s0)
         (compRenSubst_tm (upRen_tm_tm xi_tm) (up_tm_tm tau_tm)
            (up_tm_tm theta_tm) (up_ren_subst_tm_tm _ _ _ Eq_tm) s1)
-  | App s0 s1 s2 s3 =>
-      congr_App (compRenSubst_tm xi_tm tau_tm theta_tm Eq_tm s0)
+  | App s0 s1 s2 =>
+      congr_App
         (compRenSubst_tm (upRen_tm_tm xi_tm) (up_tm_tm tau_tm)
-           (up_tm_tm theta_tm) (up_ren_subst_tm_tm _ _ _ Eq_tm) s1)
+           (up_tm_tm theta_tm) (up_ren_subst_tm_tm _ _ _ Eq_tm) s0)
+        (compRenSubst_tm xi_tm tau_tm theta_tm Eq_tm s1)
         (compRenSubst_tm xi_tm tau_tm theta_tm Eq_tm s2)
-        (compRenSubst_tm xi_tm tau_tm theta_tm Eq_tm s3)
   | Pi s0 s1 =>
       congr_Pi (compRenSubst_tm xi_tm tau_tm theta_tm Eq_tm s0)
         (compRenSubst_tm (upRen_tm_tm xi_tm) (up_tm_tm tau_tm)
@@ -263,12 +257,12 @@ ren_tm zeta_tm (subst_tm sigma_tm s) = subst_tm theta_tm s :=
       congr_Lam (compSubstRen_tm sigma_tm zeta_tm theta_tm Eq_tm s0)
         (compSubstRen_tm (up_tm_tm sigma_tm) (upRen_tm_tm zeta_tm)
            (up_tm_tm theta_tm) (up_subst_ren_tm_tm _ _ _ Eq_tm) s1)
-  | App s0 s1 s2 s3 =>
-      congr_App (compSubstRen_tm sigma_tm zeta_tm theta_tm Eq_tm s0)
+  | App s0 s1 s2 =>
+      congr_App
         (compSubstRen_tm (up_tm_tm sigma_tm) (upRen_tm_tm zeta_tm)
-           (up_tm_tm theta_tm) (up_subst_ren_tm_tm _ _ _ Eq_tm) s1)
+           (up_tm_tm theta_tm) (up_subst_ren_tm_tm _ _ _ Eq_tm) s0)
+        (compSubstRen_tm sigma_tm zeta_tm theta_tm Eq_tm s1)
         (compSubstRen_tm sigma_tm zeta_tm theta_tm Eq_tm s2)
-        (compSubstRen_tm sigma_tm zeta_tm theta_tm Eq_tm s3)
   | Pi s0 s1 =>
       congr_Pi (compSubstRen_tm sigma_tm zeta_tm theta_tm Eq_tm s0)
         (compSubstRen_tm (up_tm_tm sigma_tm) (upRen_tm_tm zeta_tm)
@@ -309,12 +303,12 @@ subst_tm tau_tm (subst_tm sigma_tm s) = subst_tm theta_tm s :=
       congr_Lam (compSubstSubst_tm sigma_tm tau_tm theta_tm Eq_tm s0)
         (compSubstSubst_tm (up_tm_tm sigma_tm) (up_tm_tm tau_tm)
            (up_tm_tm theta_tm) (up_subst_subst_tm_tm _ _ _ Eq_tm) s1)
-  | App s0 s1 s2 s3 =>
-      congr_App (compSubstSubst_tm sigma_tm tau_tm theta_tm Eq_tm s0)
+  | App s0 s1 s2 =>
+      congr_App
         (compSubstSubst_tm (up_tm_tm sigma_tm) (up_tm_tm tau_tm)
-           (up_tm_tm theta_tm) (up_subst_subst_tm_tm _ _ _ Eq_tm) s1)
+           (up_tm_tm theta_tm) (up_subst_subst_tm_tm _ _ _ Eq_tm) s0)
+        (compSubstSubst_tm sigma_tm tau_tm theta_tm Eq_tm s1)
         (compSubstSubst_tm sigma_tm tau_tm theta_tm Eq_tm s2)
-        (compSubstSubst_tm sigma_tm tau_tm theta_tm Eq_tm s3)
   | Pi s0 s1 =>
       congr_Pi (compSubstSubst_tm sigma_tm tau_tm theta_tm Eq_tm s0)
         (compSubstSubst_tm (up_tm_tm sigma_tm) (up_tm_tm tau_tm)
@@ -396,12 +390,12 @@ Fixpoint rinst_inst_tm (xi_tm : nat -> nat) (sigma_tm : nat -> tm)
       congr_Lam (rinst_inst_tm xi_tm sigma_tm Eq_tm s0)
         (rinst_inst_tm (upRen_tm_tm xi_tm) (up_tm_tm sigma_tm)
            (rinstInst_up_tm_tm _ _ Eq_tm) s1)
-  | App s0 s1 s2 s3 =>
-      congr_App (rinst_inst_tm xi_tm sigma_tm Eq_tm s0)
+  | App s0 s1 s2 =>
+      congr_App
         (rinst_inst_tm (upRen_tm_tm xi_tm) (up_tm_tm sigma_tm)
-           (rinstInst_up_tm_tm _ _ Eq_tm) s1)
+           (rinstInst_up_tm_tm _ _ Eq_tm) s0)
+        (rinst_inst_tm xi_tm sigma_tm Eq_tm s1)
         (rinst_inst_tm xi_tm sigma_tm Eq_tm s2)
-        (rinst_inst_tm xi_tm sigma_tm Eq_tm s3)
   | Pi s0 s1 =>
       congr_Pi (rinst_inst_tm xi_tm sigma_tm Eq_tm s0)
         (rinst_inst_tm (upRen_tm_tm xi_tm) (up_tm_tm sigma_tm)
