@@ -1,5 +1,6 @@
 Require Import imports.
 Require Export typing.
+From Ltac2 Require Ltac2.
 Set Default Proof Mode "Classic".
 Ltac2 spec_refl () :=
   List.iter
@@ -505,6 +506,71 @@ Proof.
   - hauto lq:on rew:off db:wt.
 Qed.
 
+Lemma lookup_deter n Γ A A' : lookup n Γ A -> lookup n Γ A' -> A = A'.
+Proof. move => h. move : A'. elim : n Γ A /h => //=; hauto lq:on inv:lookup. Qed.
+
+Reserved Notation "Γ ⊢ a ≃ b ∈  A" (at level 70, no associativity).
+
+(* Inductive WtEquivHom Γ : tm -> tm -> tm -> Prop := *)
+(* | WE_Red A B U : *)
+(*   Γ ⊢ A ▻ B ∈ U -> *)
+(*   (* ------------------- *) *)
+(*   Γ ⊢ A ≃ B ∈ U *)
+(* | WE_Exp A B U : *)
+(*   Γ ⊢ B ▻ A ∈ U -> *)
+(*   (* ------------------- *) *)
+(*   Γ ⊢ A ≃ B ∈ U *)
+(* | WE_Trans A B C U : *)
+(*   Γ ⊢ A ≃ B ∈ U -> *)
+(*   Γ ⊢ B ≃ C ∈ U -> *)
+(*   Γ ⊢ A ≃ C ∈ U *)
+(* where *)
+(* "Γ ⊢ A ≃ B ∈ U" := (WtEquivHom Γ A B U). *)
+
+Lemma unique_sorts_mutual :
+  (forall Γ a b A, Γ ⊢ a ▻ b ∈ A -> forall i j, A = Univ i -> Γ ⊢ a ▻ a ∈ Univ j -> i = j ) /\
+  (forall Γ a b A, Γ ⊢ a ▻+ b ∈ A -> forall i j, A = Univ i -> Γ ⊢ a ▻ a ∈ Univ j -> i = j ) /\
+  (forall Γ, ⊢ Γ -> True).
+Admitted.
+
+(* Lemma Prod_functionality Γ A B0 B1 i : *)
+
+
+Lemma unique_mutual :
+  (forall Γ a b A, Γ ⊢ a ▻ b ∈ A -> forall B, Γ ⊢ a ▻ a ∈ B -> Γ ⊢ A ≡ B ) /\
+  (forall Γ a b A, Γ ⊢ a ▻+ b ∈ A -> forall B, Γ ⊢ a ▻ a ∈ B -> Γ ⊢ A ≡ B ) /\
+  (forall Γ, ⊢ Γ -> True).
+Proof.
+  apply wt_mutual_ind.
+  - move => Γ n A hΓ _ hn B.
+    move /Var_inv.
+    hauto lq:on use:lookup_deter, Equiv_sym.
+  - move => Γ i hΓ _ B.
+    move /Univ_inv => [_ hB]. eauto using Equiv_sym.
+  - move => Γ i A A' B B' hA ihA hB ihB U.
+    move /Prod_inv.
+    move => [A'0][B'0][j][[? ?]][hA0][hB0]hU.
+    eapply lh_refl_mutual in hA0, hB0. apply ihB in hB0.
+    have ? : j = i by admit. subst.
+    by apply Equiv_sym.
+  - move => Γ A A' i B M M' hA ihA hB ihB hM ihM U.
+    move /Lam_inv.
+    move => [A'0][M'0][B0][i0][hA0][hB0][hM0]hE.
+    eapply lh_refl_mutual in hM0. apply ihM in hM0 => {ihM}.
+    apply Equiv_sym in hE. apply : WE_Trans; eauto.
+    admit.
+  - move => Γ A A' i B B' M M' N N' hA ihA hB ihB hM ihM hN ihN U.
+    move /App_inv. move => [A0][A0'][B0][N1][i0][hA0][hB0][hN'][hu]_.
+    by apply Equiv_sym.
+  - hauto lq:on use:App_inv, Equiv_sym.
+  - by eauto.
+  - hauto lq:on db:wt.
+  - hauto lq:on db:wt.
+  - hauto lq:on db:wt.
+  - hauto lq:on db:wt.
+  - done.
+  - done.
+Admitted.
 
 
 Lemma Prod_cong_stage0 Γ A0 A i B :
