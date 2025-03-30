@@ -441,6 +441,17 @@ Proof.
   - hauto lq:on rew:off db:wt.
 Qed.
 
+Lemma Var_inv' Γ n N T (h : Γ ⊢ var_tm n ▻ N ∈ T) :
+  exists A, lookup n Γ A /\ Γ ⊢ T ≡ A /\ (N = var_tm n \/ exists A0 B0, Γ ⊢ T ≡ Pi A0 B0 /\ N = Lam A0 (App B0 (var_tm (shift n)) (var_tm var_zero))).
+Proof.
+  move E : (var_tm n) h => M h.
+  move : n E.
+  elim : Γ M N T / h=>//.
+  - hauto lq:on use:lookup_wf db:wt.
+  - move => Γ a b A A' i B B' hA _ hB _ ha _ n ?. subst.
+  - hauto lq:on rew:off db:wt.
+  - hauto lq:on rew:off db:wt.
+
 Lemma Prod_inv Γ A B N T (h : Γ ⊢ Pi A B ▻ N ∈ T) :
   exists A' B' i, N = Pi A' B' /\ Γ ⊢ A ▻ A' ∈ Univ i /\ A::Γ ⊢ B ▻ B' ∈ Univ i /\ Γ ⊢ T ≡ Univ i.
 Proof.
@@ -536,6 +547,38 @@ Admitted.
 (* Lemma Prod_functionality Γ A B0 B1 i : *)
 
 
+Lemma Prod_cong_stage0 Γ A0 A i B :
+  Γ ⊢ A0 ▻+ A ∈ Univ i ->
+  A0 :: Γ ⊢ B ▻ B ∈ Univ i ->
+  Γ ⊢ Pi A0 B ▻+ Pi A B ∈ Univ i.
+Proof.
+  move => h h1.
+  suff : A :: Γ ⊢ B ▻ B ∈ Univ i by sfirstorder use:lh_refl_helper.
+  apply Ctx_conv with (A := A0); eauto with wt.
+  apply /wrs_Equiv : h.
+  hauto lq:on use:rh_refl_mutual db:wt.
+Qed.
+
+Lemma Prod_cong Γ A A' B B' i :
+  Γ ⊢ A ▻+ A' ∈ Univ i ->
+  A :: Γ ⊢ B ▻+ B' ∈ Univ i ->
+  Γ ⊢ Pi A B ▻+ Pi A' B' ∈ Univ i.
+Proof.
+  move E : (A :: Γ) => Δ.
+  move E0 : (Univ i) => T + h.
+  move : A Γ i E E0.
+  elim : Δ B B' T / h.
+  - move => Γ M N A h A0 Γ0 i ? ? h1. subst.
+    have : Γ0 ⊢ Pi A0 M ▻ Pi A0 N ∈ Univ i by
+      hauto lq:on use:lh_refl_mutual db:wt.
+    move / WRs_Trans. apply.
+    apply Prod_cong_stage0; eauto. sfirstorder use:rh_refl_mutual.
+  - move => Γ M N P A hM hN ih A0 Γ0 i ? ? h. subst.
+    specialize ih with (1 := eq_refl) (2 := eq_refl) (3 := h).
+    move /WRs_Trans : ih. apply.
+    hauto lq:on use:lh_refl_mutual db:wt.
+Qed.
+
 Lemma unique_mutual :
   (forall Γ a b A, Γ ⊢ a ▻ b ∈ A -> forall B, Γ ⊢ a ▻ a ∈ B -> Γ ⊢ A ≡ B ) /\
   (forall Γ a b A, Γ ⊢ a ▻+ b ∈ A -> forall B, Γ ⊢ a ▻ a ∈ B -> Γ ⊢ A ≡ B ) /\
@@ -572,37 +615,22 @@ Proof.
   - done.
 Admitted.
 
-
-Lemma Prod_cong_stage0 Γ A0 A i B :
-  Γ ⊢ A0 ▻+ A ∈ Univ i ->
-  A0 :: Γ ⊢ B ▻ B ∈ Univ i ->
-  Γ ⊢ Pi A0 B ▻+ Pi A B ∈ Univ i.
+Lemma exchange Γ a b c A0 A1 :
+  Γ ⊢ a ▻ b ∈ A0 ->
+  Γ ⊢ a ▻ c ∈ A1 ->
+  Γ ⊢ a ▻ b ∈ A1.
 Proof.
-  move => h h1.
-  suff : A :: Γ ⊢ B ▻ B ∈ Univ i by sfirstorder use:lh_refl_helper.
-  apply Ctx_conv with (A := A0); eauto with wt.
-  apply /wrs_Equiv : h.
-  hauto lq:on use:rh_refl_mutual db:wt.
+  move => h0 h1. apply : WR_Conv; eauto.
+  hauto lq:on use:unique_mutual, lh_refl_mutual.
 Qed.
 
-Lemma Prod_cong Γ A A' B B' i :
-  Γ ⊢ A ▻+ A' ∈ Univ i ->
-  A :: Γ ⊢ B ▻+ B' ∈ Univ i ->
-  Γ ⊢ Pi A B ▻+ Pi A' B' ∈ Univ i.
+Lemma exchange_multi_step Γ a b c A0 A1 :
+  Γ ⊢ a ▻+ b ∈ A0 ->
+  Γ ⊢ a ▻ c ∈ A1 ->
+  Γ ⊢ a ▻+ b ∈ A1.
 Proof.
-  move E : (A :: Γ) => Δ.
-  move E0 : (Univ i) => T + h.
-  move : A Γ i E E0.
-  elim : Δ B B' T / h.
-  - move => Γ M N A h A0 Γ0 i ? ? h1. subst.
-    have : Γ0 ⊢ Pi A0 M ▻ Pi A0 N ∈ Univ i by
-      hauto lq:on use:lh_refl_mutual db:wt.
-    move / WRs_Trans. apply.
-    apply Prod_cong_stage0; eauto. sfirstorder use:rh_refl_mutual.
-  - move => Γ M N P A hM hN ih A0 Γ0 i ? ? h. subst.
-    specialize ih with (1 := eq_refl) (2 := eq_refl) (3 := h).
-    move /WRs_Trans : ih. apply.
-    hauto lq:on use:lh_refl_mutual db:wt.
+  move => h0 h1. apply : WRs_Conv; eauto.
+  hauto lq:on use:unique_mutual, lh_refl_mutual.
 Qed.
 
 Lemma Lam_cong Γ A A' M M' B C i :
@@ -637,14 +665,15 @@ Proof.
       move /(_ _ h4 h5) in h2.
       move /(_ _ h4 h5) in h3.
       move /(_ h2 h3) : ih.
-      move /(proj1 rh_refl_mutual) /exchange_multi_step : tr0.
-      apply.
+      eapply rh_refl_mutual in tr0.
+      move => ih.
+      eapply WRs_Conv; eauto.
+      sfirstorder use:unique_mutual.
   - move => Γ M N P A hM hN ih A0 Γ0 ? A' C i h0 h1; subst.
     specialize ih with (1 := eq_refl) (2 := h0) (3 := h1).
     apply : WRs_Trans; last by exact ih.
     qauto l:on use:lh_refl_mutual db:wt.
 Qed.
-
 
 Lemma wr_lh_refl :
   (forall Γ a b A, Γ ⊢ a ▻ b ∈ A -> Γ ⊢ a ▻ a ∈ A ).
@@ -684,14 +713,14 @@ Lemma App_cong Γ A A' i B B' M M' N N' :
   A :: Γ ⊢ B ▻+ B' ∈ Univ i ->
   Γ ⊢ M ▻+ M' ∈ Pi A B ->
   Γ ⊢ N ▻+ N' ∈ A ->
-  Γ ⊢ App A B M N ▻+ App A' B' M' N' ∈ B[N..].
+  Γ ⊢ App B M N ▻+ App B' M' N' ∈ B[N..].
 Proof.
   move E  : (Univ i) => T h.
   move : B B' M M' N N' i E.
   elim : Γ A A' T / h.
   - move => Γ M N A h B B' M0 M' N0 N' i ? h0 h1 h2. subst.
-    apply WRs_Trans with (N := App N B M0 N0).
-    apply WR_App with (i := i); eauto 3 with wt.
+    apply WRs_Trans with (N := App B M0 N0).
+    eapply WR_App with (i := i); eauto 3 with wt.
     have : Γ ⊢ M0 ▻+ M' ∈ Pi N B.
     apply : WRs_Conv; eauto.
     apply wrs_Equiv with (i := i).
@@ -708,7 +737,7 @@ Proof.
     move : E.
     elim : Δ B B' T / h0.
     + move => ? P P' A h0 ? ? M0 M' Q Q' h2 h3. subst.
-      apply (WRs_Trans _ _ (App N P' M0 Q)).
+      apply (WRs_Trans _ _ (App P' M0 Q)).
       apply : WR_App; eauto with wt.
       apply (WRs_Conv _ _ _ P'[Q..]); cycle 1.
       apply WE_Exp with (i := i).
@@ -723,12 +752,12 @@ Proof.
       move : h h0 E.
       elim : Γ M0 M' T / h2.
       * move => Γ M M' A hM hN hP' ? Q Q' hQ. subst.
-        apply WRs_Trans with (N := App N P' M' Q); first by eauto with wt.
+        apply WRs_Trans with (N := App P' M' Q); first by eauto with wt.
         move /wr_rh_refl in hM. move{M}.
         move : hN hP' hM.
         elim : Γ Q Q' N  / hQ; first by eauto with wt.
         move => Γ M0 M1 M2 A hM0 hM1 ih hA hP' hM'.
-        apply WRs_Trans with (N := App A P' M' M1); first by eauto with wt.
+        apply WRs_Trans with (N := App P' M' M1); first by eauto with wt.
         move /(_ hA hP' hM') : ih.
         move /WRs_Conv. apply.
         apply WE_Exp with (i := i).
@@ -736,8 +765,8 @@ Proof.
       * hauto lq:on db:wt.
     + move => Γ0 M0 N0 P A hM0 hN0 ih ? ? M1 M' N1 N' h0 h1. subst.
       specialize ih with (1 := eq_refl) (2 := eq_refl).
-      apply WRs_Trans with (N := App N N0 M1 N1).
-      apply WR_App with (i := i); eauto with wt.
+      apply WRs_Trans with (N := App N0 M1 N1).
+      eapply WR_App with (i := i); eauto with wt.
       apply : WRs_Conv.
       apply ih; eauto with wt.
       eauto using WRs_Conv with wt.
@@ -746,8 +775,8 @@ Proof.
     have h0 : Γ ⊢ M ≡ N by eauto with wt.
     have h1 : ⊢ N :: Γ by qauto l:on use:rh_refl_mutual db:wt.
     specialize ih with (1 := eq_refl).
-    apply WRs_Trans with (N := App N B M0 N0).
-    apply WR_App with (i := i); sfirstorder use:lh_refl_mutual.
+    apply WRs_Trans with (N := App B M0 N0).
+    eapply WR_App with (i := i); sfirstorder use:lh_refl_mutual.
     apply ih.
     move : WRs_Ctx_conv hB (h0) (h1); repeat move/[apply]. exact.
     apply : WRs_Conv; eauto.
@@ -783,32 +812,32 @@ Proof.
     move : h4. apply exchange_multi_step.
 Qed.
 
-Lemma Lam_multi_inv Γ A M N T
-  (h : Γ ⊢ Lam A M ▻+ N ∈ T) :
-  exists A' M' B i,
-    N = Lam A' M' /\
-    Γ ⊢ A ▻+ A' ∈ Univ i /\
-    A::Γ ⊢ B ▻ B ∈ Univ i /\
-    A::Γ ⊢ M ▻+ M' ∈ B /\
-    Γ ⊢ T ≡ Pi A B.
-Proof.
-  move E : (Lam A M) h => A0 h.
-  move : A M E.
-  elim : Γ A0 N T / h.
-  - move => > h *. subst.
-    move /Lam_inv in h.
-    hauto lq:on db:wt.
-  - move => Γ M N P A h0 h1 ih A0 M0 ?. subst.
-    move /Lam_inv : h0 => [A'][M'][B][i][?][h2][h3][h4]h9. subst.
-    specialize ih with (1 := eq_refl).
-    move : ih=>[A'0][M'0][B'][i0][?][h5][h6][h7]h8. subst.
-    exists A'0, M'0, B, i. repeat split =>//.
-    apply : WRs_Trans; eauto 2.
-    hauto lq:on rew:off use:exchange_multi_step db:wt.
-    apply : WRs_Ctx_conv; eauto 2 with wt.
-    move /Ctx_step /(_ h2) in h4.
-    hauto lq:on rew:off use:exchange_multi_step db:wt.
-Qed.
+(* Lemma Lam_multi_inv Γ A M N T *)
+(*   (h : Γ ⊢ Lam A M ▻+ N ∈ T) : *)
+(*   exists A' M' B i, *)
+(*     (* N = Lam A' M' /\ *) *)
+(*     Γ ⊢ A ▻+ A' ∈ Univ i /\ *)
+(*     A::Γ ⊢ B ▻ B ∈ Univ i /\ *)
+(*     A::Γ ⊢ M ▻+ M' ∈ B /\ *)
+(*     Γ ⊢ T ≡ Pi A B. *)
+(* Proof. *)
+(*   move E : (Lam A M) h => A0 h. *)
+(*   move : A M E. *)
+(*   elim : Γ A0 N T / h. *)
+(*   - move => > h *. subst. *)
+(*     move /Lam_inv in h. *)
+(*     hauto lq:on db:wt. *)
+(*   - move => Γ M N P A h0 h1 ih A0 M0 ?. subst. *)
+(*     move /Lam_inv : h0 => [A'][M'][B][i][h2][h3][h4]h9. subst. *)
+(*     specialize ih with (1 := eq_refl). *)
+(*     move : ih=>[A'0][M'0][B'][i0][?][h5][h6][h7]h8. subst. *)
+(*     exists A'0, M'0, B, i. repeat split =>//. *)
+(*     apply : WRs_Trans; eauto 2. *)
+(*     hauto lq:on rew:off use:exchange_multi_step db:wt. *)
+(*     apply : WRs_Ctx_conv; eauto 2 with wt. *)
+(*     move /Ctx_step /(_ h2) in h4. *)
+(*     hauto lq:on rew:off use:exchange_multi_step db:wt. *)
+(* Qed. *)
 
 Lemma Univ_multi_inv Γ i N T (h : Γ ⊢ Univ i ▻+ N ∈ T) :
   N = Univ i /\ Γ ⊢ T ≡ Univ (S i).
@@ -834,8 +863,8 @@ Proof.
     move => [A'0][B'0][i4][?][?]?.
     exists i4. change (Univ i4) with (Univ i4)[N..].
     qauto l:on use:WR_cong, lh_refl_mutual, rh_refl_mutual db:wt.
-  - move => Γ A i A' A0 B M M' N N' hA [i0 ihA] hA' [i1 ihA']
-             hA0 hA0' hB [i2 ihB] hM [i3 ihM] hN [i4 ihN].
+  - move => Γ A i A' B B' M M' N N' hA [i0 ihA] hA' [i1 ihA']
+             hB [i2 ihB] hM [i3 ihM] hN [i4 ihN].
     exists i3.
     change (Univ i3) with (Univ i3)[N..].
     qauto l:on use:WR_cong, lh_refl_mutual, rh_refl_mutual db:wt.
@@ -852,11 +881,19 @@ Proof.
   eauto using WRs_Trans0 with wt.
 Qed.
 
+
 Lemma wr_diamond : forall Γ M N A P B, Γ ⊢ M ▻ N ∈ A -> Γ ⊢ M ▻ P ∈ B -> exists Q, Γ ⊢ N ▻ Q ∈ B /\ Γ ⊢ P ▻ Q ∈ A.
 Proof.
   move => Γ M N A + + h.
   elim : Γ M N A / h.
-  - hauto lq:on rew:off ctrs:WtRed use:Var_inv.
+  - move => Γ n A hΓ hn P B /[dup] h' /Var_inv.
+    move => [A0 [h0 h1]].
+    have ? : A0 = A by sfirstorder use:lookup_deter. subst.
+
+    exists (var_tm n).  split.
+    best use:
+
+hauto lq:on rew:off ctrs:WtRed use:Var_inv.
   - qauto l:on ctrs:WtRed use:Univ_inv.
   - move => Γ i A A' B B' hA ihA hB ihB P B0 /Prod_inv.
     move => [A'0][B'0][i0][?][h0][h1]h2. subst.
