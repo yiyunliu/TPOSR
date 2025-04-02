@@ -548,7 +548,8 @@ Proof.
   - move => Γ a b A A' i B B' hA ihA hB ihB ha iha a' U hau.
     apply : WR_Conv; eauto with wt.
     move : iha hau => /[apply].
-Qed.
+    (* Stuck because we cannot η expand a, which has type U   *)
+Admitted.
 
 Lemma exchange_multi_step : forall Γ M N P A B,
   Γ ⊢ M ▻+ N ∈ A -> Γ ⊢ M ▻ P ∈ B -> Γ ⊢ M ▻+ N ∈ B.
