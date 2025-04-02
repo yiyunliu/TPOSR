@@ -441,16 +441,6 @@ Proof.
   - hauto lq:on rew:off db:wt.
 Qed.
 
-Lemma Var_inv' Γ n N T (h : Γ ⊢ var_tm n ▻ N ∈ T) :
-  exists A, lookup n Γ A /\ Γ ⊢ T ≡ A /\ (N = var_tm n \/ exists A0 B0, Γ ⊢ T ≡ Pi A0 B0 /\ N = Lam A0 (App B0 (var_tm (shift n)) (var_tm var_zero))).
-Proof.
-  move E : (var_tm n) h => M h.
-  move : n E.
-  elim : Γ M N T / h=>//.
-  - hauto lq:on use:lookup_wf db:wt.
-  - move => Γ a b A A' i B B' hA _ hB _ ha _ n ?. subst.
-  - hauto lq:on rew:off db:wt.
-  - hauto lq:on rew:off db:wt.
 
 Lemma Prod_inv Γ A B N T (h : Γ ⊢ Pi A B ▻ N ∈ T) :
   exists A' B' i, N = Pi A' B' /\ Γ ⊢ A ▻ A' ∈ Univ i /\ A::Γ ⊢ B ▻ B' ∈ Univ i /\ Γ ⊢ T ≡ Univ i.
@@ -462,6 +452,7 @@ Proof.
   - move => Γ a b A A' i B B' hA _ hB _ ha iha A0 B0 ?. subst.
     spec_refl.
     move : iha => [A1][B1][i0][?][ihA][ihB]hU. subst.
+    (* hU should lead to a contradiction by noconfusion *)
     admit.
   - hauto lq:on rew:off db:wt.
   - hauto lq:on rew:off db:wt.
@@ -594,6 +585,7 @@ Proof.
     move /Prod_inv.
     move => [A'0][B'0][j][[? ?]][hA0][hB0]hU.
     eapply lh_refl_mutual in hA0, hB0. apply ihB in hB0.
+    (* By injectivity of universe. Also provable through lambdaFP *)
     have ? : j = i by admit. subst.
     by apply Equiv_sym.
   - move => Γ A A' i B M M' hA ihA hB ihB hM ihM U.
@@ -601,6 +593,7 @@ Proof.
     move => [A'0][M'0][B0][i0][hA0][hB0][hM0]hE.
     eapply lh_refl_mutual in hM0. apply ihM in hM0 => {ihM}.
     apply Equiv_sym in hE. apply : WE_Trans; eauto.
+    (* Requires uniqueness of sorts *)
     admit.
   - move => Γ A A' i B B' M M' N N' hA ihA hB ihB hM ihM hN ihN U.
     move /App_inv. move => [A0][A0'][B0][N1][i0][hA0][hB0][hN'][hu]_.
