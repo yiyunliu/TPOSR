@@ -944,6 +944,240 @@ Proof.
   eauto using WRs_Trans0 with wt.
 Qed.
 
+Notation "Γ ⊢ a ∈  A" := (Γ ⊢ a ▻ a ∈ A) (at level 70, no associativity).
+Reserved Notation "Γ ⊢ a ▻η b ∈  A" (at level 70, no associativity).
+
+Inductive OExp Γ : tm -> tm -> tm -> Prop :=
+| O_Eta a A A' i B B'  :
+  Γ ⊢ A ▻ A' ∈ Univ i ->
+  A :: Γ ⊢ B ▻ B' ∈ Univ i ->
+  Γ ⊢ a ▻ a ∈ Pi A B ->
+  Γ ⊢ a ▻η Lam A' (App (B'⟨upRen_tm_tm shift⟩) (a⟨shift⟩) (var_tm var_zero)) ∈ Pi A B
+where  "Γ ⊢ a ▻η b ∈  A" := (OExp Γ a b A).
+
+
+Reserved Notation "Γ ⊢ a ▻β b ∈  A" (at level 70, no associativity).
+Inductive WtBRed : context -> tm -> tm -> tm -> Prop :=
+| WB_Var Γ n A :
+  ⊢ Γ ->
+  lookup n Γ A ->
+  (* ------------- *)
+  Γ ⊢ var_tm n ▻β var_tm n ∈ A
+
+| WB_Univ Γ i :
+  ⊢ Γ ->
+  (* ----------- *)
+  Γ ⊢ Univ i ▻β Univ i ∈ Univ (S i)
+
+| WB_Prod Γ i A A' B B' :
+  Γ ⊢ A ▻β A' ∈ Univ i ->
+  A :: Γ ⊢ B ▻β B' ∈ Univ i ->
+  (* ------------------- *)
+  Γ ⊢ Pi A B ▻β Pi A' B' ∈ Univ i
+
+| WB_Lam Γ A A' i B M M' :
+  Γ ⊢ A ▻β A' ∈ Univ i ->
+  A :: Γ ⊢ B ▻ B ∈ Univ i ->
+  A :: Γ ⊢ M ▻β M' ∈ B ->
+  (* ------------------ *)
+  Γ ⊢ Lam A M ▻β Lam A' M' ∈ Pi A B
+
+| WB_App Γ A i B B' M M' N N' :
+  Γ ⊢ A ▻ A ∈ Univ i ->
+  A :: Γ ⊢ B ▻β B' ∈ Univ i ->
+  Γ ⊢ M ▻β M' ∈ Pi A B ->
+  Γ ⊢ N ▻β N' ∈ A ->
+  (* ------------------------ *)
+  Γ ⊢ App B M N ▻β App B' M' N' ∈ B[N..]
+
+| WB_Beta Γ A i B M M' N N' :
+  Γ ⊢ A ▻ A ∈ Univ i ->
+  A :: Γ ⊢ B ▻ B ∈ Univ i ->
+  A :: Γ ⊢ M ▻β M' ∈ B ->
+  Γ ⊢ N ▻β N' ∈ A ->
+  (*----------------------  *)
+  Γ ⊢ App B (Lam A M) N ▻β M'[N'..] ∈ B[N..]
+
+| WB_Conv Γ M N A B :
+  Γ ⊢ M ▻β N ∈ A ->
+  Γ ⊢ A ≡ B ->
+  (* ----------------- *)
+  Γ ⊢ M ▻β N ∈ B
+where
+"Γ ⊢ a ▻β b ∈ A" := (WtBRed Γ a b A).
+
+Reserved Notation "Γ ⊢ a ▻η b ∈  A" (at level 70, no associativity).
+Inductive WtExp : context -> tm -> tm -> tm -> Prop :=
+| WE_Var Γ n A :
+  ⊢ Γ ->
+  lookup n Γ A ->
+  (* ------------- *)
+  Γ ⊢ var_tm n ▻η var_tm n ∈ A
+
+| WE_Univ Γ i :
+  ⊢ Γ ->
+  (* ----------- *)
+  Γ ⊢ Univ i ▻η Univ i ∈ Univ (S i)
+
+| WE_Prod Γ i A A' B B' :
+  Γ ⊢ A ▻η A' ∈ Univ i ->
+  A :: Γ ⊢ B ▻η B' ∈ Univ i ->
+  (* ------------------- *)
+  Γ ⊢ Pi A B ▻η Pi A' B' ∈ Univ i
+
+| WE_Lam Γ A A' i B M M' :
+  Γ ⊢ A ▻η A' ∈ Univ i ->
+  A :: Γ ⊢ B ▻η B ∈ Univ i ->
+  A :: Γ ⊢ M ▻η M' ∈ B ->
+  (* ------------------ *)
+  Γ ⊢ Lam A M ▻η Lam A' M' ∈ Pi A B
+
+| WE_App Γ A i B B' M M' N N' :
+  Γ ⊢ A ▻ A ∈ Univ i ->
+  A :: Γ ⊢ B ▻η B' ∈ Univ i ->
+  Γ ⊢ M ▻η M' ∈ Pi A B ->
+  Γ ⊢ N ▻η N' ∈ A ->
+  (* ------------------------ *)
+  Γ ⊢ App B M N ▻η App B' M' N' ∈ B[N..]
+
+| WR_Eta Γ a b A A' i B B'  :
+  Γ ⊢ A ▻η A' ∈ Univ i ->
+  A :: Γ ⊢ B ▻η B' ∈ Univ i ->
+  Γ ⊢ a ▻η b ∈  Pi A B ->
+  Γ ⊢ a ▻η Lam A' (App (B'⟨upRen_tm_tm shift⟩) (b⟨shift⟩) (var_tm var_zero)) ∈ Pi A B
+
+| WE_Conv Γ M N A B :
+  Γ ⊢ M ▻η N ∈ A ->
+  Γ ⊢ A ≡ B ->
+  (* ----------------- *)
+  Γ ⊢ M ▻η N ∈ B
+where
+"Γ ⊢ a ▻η b ∈ A" := (WtExp Γ a b A).
+
+Lemma WtBRed_embed Γ a b A : Γ ⊢ a ▻β b ∈ A -> Γ ⊢ a ▻ b ∈ A.
+Proof.
+  move => h. elim : Γ a b A / h; eauto using WR_Conv with wt.
+Qed.
+
+Lemma WtExp_embed Γ a b A : Γ ⊢ a ▻η b ∈ A -> Γ ⊢ a ▻ b ∈ A.
+Proof.
+  move => h. elim : Γ a b A / h; eauto using WR_Conv with wt.
+Qed.
+
+Inductive URed Γ a b A : Prop :=
+| U_β : Γ ⊢ a ▻β b ∈ A -> URed Γ a b A
+| U_η : Γ ⊢ a ▻η b ∈ A -> URed Γ a b A.
+
+Inductive UReds Γ : tm -> tm -> tm ->  Prop :=
+| U_Refl a A : Γ ⊢ a ▻ a ∈ A -> UReds Γ a a A
+| U_Step a b c A :
+  URed Γ a b A ->
+  UReds Γ b c A ->
+  UReds Γ a c A.
+
+Lemma U_Once Γ a b A :
+  URed Γ a b A ->
+  UReds Γ a b A.
+Proof.
+  move => h.
+  apply : U_Step; eauto.
+  apply U_Refl.
+  elim : h.
+  - move /WtBRed_embed. sfirstorder use:rh_refl_mutual.
+  - move /WtExp_embed. sfirstorder use:rh_refl_mutual.
+Qed.
+
+Lemma U_Onceβ Γ a b A :
+  WtBRed Γ a b A ->
+  UReds Γ a b A.
+Proof. sfirstorder use:U_Once, U_β. Qed.
+
+Lemma U_Onceη Γ a b A :
+  WtExp Γ a b A ->
+  UReds Γ a b A.
+Proof. sfirstorder use:U_Once, U_η. Qed.
+
+#[export]Hint Constructors WtBRed : bred.
+#[export]Hint Constructors WtExp : eexp.
+
+Definition β_morphing_ok ρ Γ Δ := forall n A, lookup n Γ A -> Δ ⊢ ρ n ▻β ρ n ∈ A[ρ].
+
+Lemma β_morphing_ok_embed ρ Γ Δ :
+  β_morphing_ok ρ Γ Δ -> lookup_good_morphing ρ Γ Δ.
+Proof. sfirstorder use:WtBRed_embed. Qed.
+
+Lemma wt_β_morphing :
+  (forall Γ a b A, Γ ⊢ a ▻β b ∈ A -> forall ρ Δ,
+        β_morphing_ok ρ Γ Δ -> Wf Δ -> Δ ⊢ a[ρ] ▻β b[ρ] ∈ A[ρ] ).
+Proof.
+  move => Γ a b A ha.
+  elim : Γ a b A / ha => /=; eauto with bred.
+  - move => Γ i A A' B B' hA ihA hB ihB ρ Δ hρ hΔ.
+    constructor; eauto. apply ihB.
+Admitted.
+
+Lemma β_lh_refl Γ a b A :
+  Γ ⊢ a ▻ b ∈ A ->
+  Γ ⊢ a ▻β a ∈ A.
+Proof.
+  move => h. elim : Γ a b A / h; eauto with bred.
+  - qauto l:on use:lh_refl_mutual db:bred.
+  - move => Γ A i A' B B' M M' N N' ha ihA hA' ihA' hB ihB' hM ihM' hN ihN'.
+    apply : WB_App; cycle 1. eauto. apply : WB_Lam; eauto. sfirstorder use:lh_refl_mutual.
+    sfirstorder use:lh_refl_mutual.
+    eauto.
+  - hauto lq:on use:WB_Conv, WE_Red.
+  - hauto lq:on use:WB_Conv, WE_Exp.
+Qed.
+
+Lemma η_lh_refl Γ a b A :
+  Γ ⊢ a ▻ b ∈ A ->
+  Γ ⊢ a ▻η a ∈ A.
+Proof.
+  move => h. elim : Γ a b A / h; eauto with eexp.
+  - qauto l:on use:lh_refl_mutual db:eexp.
+  - hauto lq:on use:WE_Conv, WE_Red.
+  - hauto lq:on use:WE_Conv, WE_Exp.
+Qed.
+
+
+Lemma Prod_congU0 Γ A A' B B' i :
+  URed Γ A A' (Univ i) ->
+  URed (A :: Γ) B B' (Univ i) ->
+  UReds Γ (Pi A B) (Pi A' B') (Univ i).
+Proof.
+  move => [h0 | h0] [h1 | h1].
+  - hauto lq:on use:U_Onceβ ctrs:WtBRed.
+  - apply : U_Step.
+    apply U_β. constructor; eauto.
+    hauto lq:on use:β_lh_refl, WtExp_embed.
+    apply U_Once.
+    apply U_η.
+    constructor. hauto lq:on use:WtBRed_embed, η_lh_refl, rh_refl_mutual.
+
+    apply
+    best use:lh_refl_mutual.
+
+Lemma Prod_congU Γ A A' B B' i :
+  UReds Γ A A' (Univ i) ->
+  UReds (A :: Γ) B B' (Univ i) ->
+  UReds Γ (Pi A B) (Pi A' B') (Univ i).
+Proof.
+Admitted.
+
+Lemma WtRed_UReds Γ a b A :
+  Γ ⊢ a ▻ b ∈ A ->
+  UReds Γ a b A.
+Proof.
+  move => h.
+  elim : Γ a b A / h.
+  - move => Γ n A hΓ hn. by apply /U_Once /U_β /WB_Var.
+  - move => Γ i hΓ. by apply /U_Once /U_β /WB_Univ.
+  - move => Γ i A A' B B' hA ihA hB ihB.
+    by apply Prod_congU.
+  - admit.
+Admitted.
+
 
 Lemma wr_diamond : forall Γ M N A P B, Γ ⊢ M ▻ N ∈ A -> Γ ⊢ M ▻ P ∈ B -> exists Q, Γ ⊢ N ▻ Q ∈ B /\ Γ ⊢ P ▻ Q ∈ A.
 Proof.
