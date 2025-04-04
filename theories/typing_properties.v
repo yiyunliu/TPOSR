@@ -513,26 +513,9 @@ Proof. move => h. move : A'. elim : n Γ A /h => //=; hauto lq:on inv:lookup. Qe
 
 Reserved Notation "Γ ⊢ a ≃ b ∈  A" (at level 70, no associativity).
 
-(* Inductive WtEquivHom Γ : tm -> tm -> tm -> Prop := *)
-(* | WE_Red A B U : *)
-(*   Γ ⊢ A ▻ B ∈ U -> *)
-(*   (* ------------------- *) *)
-(*   Γ ⊢ A ≃ B ∈ U *)
-(* | WE_Exp A B U : *)
-(*   Γ ⊢ B ▻ A ∈ U -> *)
-(*   (* ------------------- *) *)
-(*   Γ ⊢ A ≃ B ∈ U *)
-(* | WE_Trans A B C U : *)
-(*   Γ ⊢ A ≃ B ∈ U -> *)
-(*   Γ ⊢ B ≃ C ∈ U -> *)
-(*   Γ ⊢ A ≃ C ∈ U *)
-(* where *)
-(* "Γ ⊢ A ≃ B ∈ U" := (WtEquivHom Γ A B U). *)
 
 Lemma unique_sorts_mutual :
-  (forall Γ a b A, Γ ⊢ a ▻ b ∈ A -> forall i j, A = Univ i -> Γ ⊢ a ▻ a ∈ Univ j -> i = j ) /\
-  (forall Γ a b A, Γ ⊢ a ▻+ b ∈ A -> forall i j, A = Univ i -> Γ ⊢ a ▻ a ∈ Univ j -> i = j ) /\
-  (forall Γ, ⊢ Γ -> True).
+  forall Γ a b c A, Γ ⊢ a ▻ b ∈ A -> forall i j, A = Univ i -> Γ ⊢ a ▻ c ∈ Univ j -> i = j.
 Admitted.
 
 (* Lemma Prod_functionality Γ A B0 B1 i : *)
@@ -549,6 +532,14 @@ Proof.
   apply /wrs_Equiv : h.
   hauto lq:on use:rh_refl_mutual db:wt.
 Qed.
+
+(* Lemma Prod_cong' A Γ :  *)
+(*   A :: Γ ⊢ B ≡ B0 -> *)
+(*   Γ ⊢ Pi A B ≡ Pi A B0. *)
+
+Lemma Univ_Inj Γ i j :
+  Γ ⊢ Univ i ≡ Univ j -> i = j.
+Admitted.
 
 Lemma Prod_cong Γ A A' B B' i :
   Γ ⊢ A ▻+ A' ∈ Univ i ->
@@ -570,6 +561,82 @@ Proof.
     hauto lq:on use:lh_refl_mutual db:wt.
 Qed.
 
+Lemma equiv_cast Γ i A B :
+  Γ ⊢ A ▻ A ∈ Univ i ->
+  Γ ⊢ A ≡ B ->
+  Γ ⊢ B ▻ B ∈ Univ i.
+Proof.
+  move => + h.
+  elim : A B / h.
+  - move => A B i0 h0 h1.
+    have ? : i0 = i by sfirstorder use:unique_sorts_mutual. subst.
+    sfirstorder use:rh_refl_mutual.
+  - move => A B i0 h0 h1.
+    have ? : i0 = i by hauto lq:on rew:off use:unique_sorts_mutual, rh_refl_mutual. subst.
+    sfirstorder use:lh_refl_mutual.
+  - eauto.
+Qed.
+
+Inductive WtEquivHom Γ i : tm -> tm -> Prop :=
+| WEH_Red A B  :
+  Γ ⊢ A ▻ B ∈ Univ i ->
+  (* ------------------- *)
+  Γ ⊢ A ≃ B ∈ i
+| WEH_Exp A B  :
+  Γ ⊢ B ▻ A ∈ Univ i ->
+  (* ------------------- *)
+  Γ ⊢ A ≃ B ∈ i
+| WEH_Trans A B C :
+  Γ ⊢ A ≃ B ∈ i ->
+  Γ ⊢ B ≃ C ∈ i ->
+  Γ ⊢ A ≃ C ∈ i
+where
+"Γ ⊢ A ≃ B ∈ i" := (WtEquivHom Γ i A B ).
+
+Lemma WtEquivHom_embed Γ i A B :
+  Γ ⊢ A ≃ B ∈ i ->
+  Γ ⊢ A ≡ B.
+Proof. induction 1; hauto lq:on ctrs:WtEquiv. Qed.
+
+Lemma WtEquivHom_regularity Γ i A B :
+  Γ ⊢ A ≃ B ∈ i -> Γ ⊢ A ▻ A ∈ Univ i /\ Γ ⊢ B ▻ B ∈ Univ i.
+  induction 1; sfirstorder use:lh_refl_mutual, rh_refl_mutual. Qed.
+
+Lemma equiv_cast' Γ i A C B :
+  Γ ⊢ A ▻ C ∈ Univ i ->
+  Γ ⊢ A ≡ B ->
+  Γ ⊢ A ≃ B ∈ i.
+Proof.
+  move => + h.
+  move : C.
+  elim : A B  /h.
+  - move => A B i0 h0 h1 C.
+    have ? : i0 = i by hauto lq:on use:unique_sorts_mutual, lh_refl_mutual.
+    hauto lq:on ctrs:WtEquivHom.
+  - move => A B i0 h0 h1 C.
+    have ? : i0 = i by hauto lq:on use:unique_sorts_mutual, lh_refl_mutual, rh_refl_mutual.
+    hauto lq:on ctrs:WtEquivHom.
+  - move => A B C h0 ih0 h1 ih1 C0 {}/ih0 ih0.
+    have {}/ih1 : Γ ⊢ B ▻ B ∈ Univ i by hauto l:on use:WtEquivHom_regularity.
+    eauto using WEH_Trans.
+Qed.
+
+Lemma Prod_cong' Γ A _A i B0 B1 :
+  Γ ⊢ A ▻ _A ∈ Univ i ->
+  A :: Γ ⊢ B0 ≃ B1 ∈ i ->
+  Γ ⊢ Pi A B0 ≃ Pi A B1 ∈ i.
+Proof.
+  move => h h0.
+  elim : B0 B1 / h0.
+  - move => B0 B1 hB.
+    apply WEH_Red.
+    constructor; sfirstorder use:lh_refl_mutual.
+  - move => B0 B1 hB.
+    apply WEH_Exp.
+    constructor; sfirstorder use:rh_refl_mutual, lh_refl_mutual.
+  - hauto lq:on ctrs:WtEquivHom.
+Qed.
+
 Lemma unique_mutual :
   (forall Γ a b A, Γ ⊢ a ▻ b ∈ A -> forall B, Γ ⊢ a ▻ a ∈ B -> Γ ⊢ A ≡ B ) /\
   (forall Γ a b A, Γ ⊢ a ▻+ b ∈ A -> forall B, Γ ⊢ a ▻ a ∈ B -> Γ ⊢ A ≡ B ) /\
@@ -586,15 +653,18 @@ Proof.
     move => [A'0][B'0][j][[? ?]][hA0][hB0]hU.
     eapply lh_refl_mutual in hA0, hB0. apply ihB in hB0.
     (* By injectivity of universe. Also provable through lambdaFP *)
-    have ? : j = i by admit. subst.
+    have ? : j = i by hauto lq:on use:Univ_Inj. subst.
     by apply Equiv_sym.
   - move => Γ A A' i B M M' hA ihA hB ihB hM ihM U.
     move /Lam_inv.
     move => [A'0][M'0][B0][i0][hA0][hB0][hM0]hE.
     eapply lh_refl_mutual in hM0. apply ihM in hM0 => {ihM}.
-    apply Equiv_sym in hE. apply : WE_Trans; eauto.
-    (* Requires uniqueness of sorts *)
-    admit.
+    apply Equiv_sym in hE. apply : WE_Trans; eauto. clear hE.
+    apply Equiv_sym in hM0.
+    have {}hM0 : A :: Γ ⊢ B0 ≃ B ∈ i0 by sfirstorder use:equiv_cast', Equiv_sym.
+    apply Equiv_sym.
+    apply : WtEquivHom_embed; eauto.
+    apply : Prod_cong'; eauto.
   - move => Γ A A' i B B' M M' N N' hA ihA hB ihB hM ihM hN ihN U.
     move /App_inv. move => [A0][A0'][B0][N1][i0][hA0][hB0][hN'][hu]_.
     by apply Equiv_sym.
@@ -606,7 +676,7 @@ Proof.
   - hauto lq:on db:wt.
   - done.
   - done.
-Admitted.
+Qed.
 
 Lemma exchange Γ a b c A0 A1 :
   Γ ⊢ a ▻ b ∈ A0 ->
