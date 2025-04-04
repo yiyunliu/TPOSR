@@ -1106,6 +1106,10 @@ Lemma β_morphing_ok_embed ρ Γ Δ :
   β_morphing_ok ρ Γ Δ -> lookup_good_morphing ρ Γ Δ.
 Proof. sfirstorder use:WtBRed_embed. Qed.
 
+Lemma wt_renaming_mutual :
+  (forall Γ a b A, Γ ⊢ a ▻ b ∈ A -> forall ξ Δ,
+        lookup_good_renaming ξ Γ Δ -> Wf Δ -> Δ ⊢ a⟨ξ⟩ ▻ b⟨ξ⟩ ∈ A⟨ξ⟩ )
+
 Lemma wt_β_morphing :
   (forall Γ a b A, Γ ⊢ a ▻β b ∈ A -> forall ρ Δ,
         β_morphing_ok ρ Γ Δ -> Wf Δ -> Δ ⊢ a[ρ] ▻β b[ρ] ∈ A[ρ] ).
