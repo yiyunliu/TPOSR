@@ -1106,9 +1106,84 @@ Lemma β_morphing_ok_embed ρ Γ Δ :
   β_morphing_ok ρ Γ Δ -> lookup_good_morphing ρ Γ Δ.
 Proof. sfirstorder use:WtBRed_embed. Qed.
 
-Lemma wt_renaming_mutual :
-  (forall Γ a b A, Γ ⊢ a ▻ b ∈ A -> forall ξ Δ,
-        lookup_good_renaming ξ Γ Δ -> Wf Δ -> Δ ⊢ a⟨ξ⟩ ▻ b⟨ξ⟩ ∈ A⟨ξ⟩ )
+Lemma WB_App' Γ A i B B' M M' N N' U :
+  U = B[N..] ->
+  Γ ⊢ A ▻ A ∈ Univ i ->
+  A :: Γ ⊢ B ▻β B' ∈ Univ i ->
+  Γ ⊢ M ▻β M' ∈ Pi A B ->
+  Γ ⊢ N ▻β N' ∈ A ->
+  (* ------------------------ *)
+  Γ ⊢ App B M N ▻β App B' M' N' ∈ U.
+Proof. move => ->. apply WB_App. Qed.
+
+Lemma WB_Beta' Γ A i B M M' N N' U0 U1 :
+  U0 = M'[N'..] ->
+  U1 = B[N..] ->
+  Γ ⊢ A ▻ A ∈ Univ i ->
+  A :: Γ ⊢ B ▻ B ∈ Univ i ->
+  A :: Γ ⊢ M ▻β M' ∈ B ->
+  Γ ⊢ N ▻β N' ∈ A ->
+  (*----------------------  *)
+  Γ ⊢ App B (Lam A M) N ▻β U0 ∈ U1.
+Proof. move => -> ->. apply WB_Beta. Qed.
+
+Lemma wt_β_renaming :
+  (forall Γ a b A, Γ ⊢ a ▻β b ∈ A -> forall ξ Δ,
+        lookup_good_renaming ξ Γ Δ -> Wf Δ -> Δ ⊢ a⟨ξ⟩ ▻β b⟨ξ⟩ ∈ A⟨ξ⟩ ).
+Proof.
+  move => Γ a b A h.
+  elim : Γ a b A / h; eauto with bred.
+  - move => Γ n A hΓ hn ξ Δ hξ hΔ.
+    constructor; eauto.
+  - move => *. constructor; eauto.
+  - move => Γ i A A' B B' hA ihA hB ihB ξ Δ hξ hΔ /=.
+    apply WB_Prod; eauto.
+    apply ihB. hauto l:on use:good_renaming_up.
+    econstructor; eauto.
+    apply WtBRed_embed. apply ihA; eauto.
+  - move => Γ A A' i B M M' hA ihA hB hM ihM ξ Δ hξ hΔ [:tr0] /=.
+    apply : WB_Lam; eauto.
+    eapply wt_renaming_univ; eauto.
+    hauto l:on use:good_renaming_up.
+    abstract : tr0.
+    econstructor; eauto. sfirstorder use:WtBRed_embed.
+    apply ihM. hauto l:on use:good_renaming_up.
+    assumption.
+  - move => Γ A i B B' M M' N N' hA hB ihB hM ihM hN ihN ξ Δ hξ hΔ [:tr0]/=.
+    apply : WB_App'; eauto. by asimpl.
+    rewrite -/ren_tm. abstract : tr0.
+    sfirstorder use:wt_renaming_univ.
+    rewrite -/ren_tm.
+    apply ihB. hauto l:on use:good_renaming_up.
+    econstructor; eauto.
+    apply tr0.
+  - move => Γ A i B M M' N N' ha hB hM ihM hN ihN ξ Δ hξ hΔ [:tr0].
+    apply : WB_Beta'; cycle 1; eauto; rewrite -/ren_tm.
+    by asimpl.
+    abstract : tr0.
+    sfirstorder use:wt_renaming_univ.
+    hauto lq:on  use:good_renaming_up, wt_renaming_univ db:wt.
+    hauto q:on use:good_renaming_up db:wt.
+    by asimpl.
+  - hauto lq:on use:equiv_renaming db:bred.
+Qed.
+
+Lemma βmorphing_up ρ k Γ Δ A B
+  (h : β_morphing_ok ρ Γ Δ) :
+  Δ ⊢ A[ρ] ▻β B ∈ Univ k ->
+  β_morphing_ok (up_tm_tm ρ) (A :: Γ) (A [ρ] :: Δ).
+Proof.
+  rewrite /lookup_good_morphing => h1.
+  have hΔ : ⊢ (A [ρ] :: Δ) by
+    hauto lq:on use:β_morphing_ok_embed, WtBRed_embed db:wt.
+  inversion 1=>*; subst.
+  - apply WB_Var => //.
+    asimpl. apply : here'. by asimpl.
+  - asimpl. rewrite !subst_ren_factor.
+    eapply wt_β_renaming. hauto l:on unfold:lookup_good_morphing.
+    apply lookup_good_renaming_shift.
+    eauto with wt.
+Qed.
 
 Lemma wt_β_morphing :
   (forall Γ a b A, Γ ⊢ a ▻β b ∈ A -> forall ρ Δ,
