@@ -1193,6 +1193,12 @@ Proof.
   elim : Γ a b A / ha => /=; eauto with bred.
   - move => Γ i A A' B B' hA ihA hB ihB ρ Δ hρ hΔ.
     constructor; eauto. apply ihB.
+    qauto l:on use:βmorphing_up.
+    econstructor; eauto.
+    apply WtBRed_embed. apply ihA; eauto.
+  - move => Γ A A' i B M M' hA ihA hB hM ihM ρ Δ hρ hΔ.
+    apply : WB_Lam; eauto.
+best use:good_morphing_up, β_morphing_ok_embed, wt_morphing_mutual.
 Admitted.
 
 Lemma β_lh_refl Γ a b A :
