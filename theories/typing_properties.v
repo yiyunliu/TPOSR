@@ -1420,12 +1420,14 @@ Proof.
     move => h1.
     move : hA hA' ih h.
     elim : B B' Q / h1.
-    + move => B U.
+    + move => B U hB hA hA' ih ?. subst. spec_refl.
+      apply : UReds_transitive; eauto.
+      apply Prod_congU0; eauto.
+      sfirstorder use:βη_lh_refl.
+      apply ih.
+      apply U_Once.
+Admitted.
 
-
-
-
-  elim E : A A' (Univ i) / h.
 
 Lemma WtRed_UReds Γ a b A :
   Γ ⊢ a ▻ b ∈ A ->
@@ -1437,7 +1439,7 @@ Proof.
   - move => Γ i hΓ. by apply /U_Once /U_β /WB_Univ.
   - move => Γ i A A' B B' hA ihA hB ihB.
     by apply Prod_congU.
-  - admit.
+  - move => Γ A A' i B M M'.
 Admitted.
 
 
