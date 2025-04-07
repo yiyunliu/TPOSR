@@ -166,6 +166,16 @@ Proof.
     by asimpl.
 Qed.
 
+Lemma wt_morphing :
+  (forall Γ a b A, Γ ⊢ a ▻ b ∈ A -> forall ρ Δ,
+        lookup_good_morphing ρ Γ Δ -> Wf Δ -> Δ ⊢ a[ρ] ▻ b[ρ] ∈ A[ρ] ).
+Proof. sfirstorder use:wt_morphing_mutual. Qed.
+
+Lemma wt_morphing_univ  :
+  (forall Γ a b i, Γ ⊢ a ▻ b ∈ Univ i -> forall ρ Δ,
+        lookup_good_morphing ρ Γ Δ -> Wf Δ -> Δ ⊢ a[ρ] ▻ b[ρ] ∈ Univ i ).
+Proof. hauto lq:on use:wt_morphing. Qed.
+
 Lemma equiv_renaming Γ A B (h : Γ ⊢ A ≡ B) :
   forall ξ Δ, lookup_good_renaming ξ Γ Δ -> ⊢ Δ -> Δ ⊢ A⟨ξ⟩ ≡ B⟨ξ⟩.
 Proof.
@@ -176,6 +186,16 @@ Lemma wr_morphing :
   forall Γ a b A, Γ ⊢ a ▻ b ∈ A -> forall ρ Δ,
         lookup_good_morphing ρ Γ Δ -> Wf Δ -> Δ ⊢ a[ρ] ▻ b[ρ] ∈ A[ρ].
 Proof. apply wt_morphing_mutual. Qed.
+
+Lemma equiv_morphing Γ Δ A B ρ (h : Γ ⊢ A ≡ B) :
+  lookup_good_morphing ρ Γ Δ -> Wf Δ -> Δ ⊢ A[ρ] ≡ B[ρ].
+Proof.
+  move : Δ ρ.
+  elim : A B/h.
+  - hauto lq:on ctrs:WtEquiv use:wt_morphing_univ.
+  - hauto lq:on ctrs:WtEquiv use:wt_morphing_univ.
+  - hauto lq:on ctrs:WtEquiv use:wt_morphing_univ.
+Qed.
 
 Lemma wrs_Equiv Γ A B i (h : Γ ⊢ A ▻+ B ∈ Univ i) : Γ ⊢ A ≡ B.
 Proof.
@@ -1040,7 +1060,7 @@ Inductive WtExp : context -> tm -> tm -> tm -> Prop :=
   (* ------------------------ *)
   Γ ⊢ App B M N ▻η App B' M' N' ∈ B[N..]
 
-| WR_Eta Γ a b A A' i B B'  :
+| WE_Eta Γ a b A A' i B B'  :
   Γ ⊢ A ▻η A' ∈ Univ i ->
   A :: Γ ⊢ B ▻η B' ∈ Univ i ->
   Γ ⊢ a ▻η b ∈  Pi A B ->
@@ -1053,6 +1073,14 @@ Inductive WtExp : context -> tm -> tm -> tm -> Prop :=
   Γ ⊢ M ▻η N ∈ B
 where
 "Γ ⊢ a ▻η b ∈ A" := (WtExp Γ a b A).
+
+Lemma WE_Eta' Γ a b A A' i B B' u  :
+  u = Lam A' (App B'⟨upRen_tm_tm shift⟩ b⟨shift⟩ (var_tm var_zero)) ->
+  Γ ⊢ A ▻η A' ∈ Univ i ->
+  A :: Γ ⊢ B ▻η B' ∈ Univ i ->
+  Γ ⊢ a ▻η b ∈  Pi A B ->
+  Γ ⊢ a ▻η u ∈ Pi A B.
+Proof. move => ->. apply WE_Eta. Qed.
 
 Lemma WtBRed_embed Γ a b A : Γ ⊢ a ▻β b ∈ A -> Γ ⊢ a ▻ b ∈ A.
 Proof.
@@ -1074,6 +1102,16 @@ Inductive UReds Γ : tm -> tm -> tm ->  Prop :=
   URed Γ a b A ->
   UReds Γ b c A ->
   UReds Γ a c A.
+
+Lemma UReds_transitive Γ a b c A  :
+  UReds Γ a b A ->
+  UReds Γ b c A ->
+  UReds Γ a c A.
+Proof.
+  move => h. move : c.
+  elim : a b A / h => //.
+  hauto lq:on ctrs:UReds.
+Qed.
 
 Lemma U_Once Γ a b A :
   URed Γ a b A ->
@@ -1106,6 +1144,7 @@ Lemma β_morphing_ok_embed ρ Γ Δ :
   β_morphing_ok ρ Γ Δ -> lookup_good_morphing ρ Γ Δ.
 Proof. sfirstorder use:WtBRed_embed. Qed.
 
+
 Lemma WB_App' Γ A i B B' M M' N N' U :
   U = B[N..] ->
   Γ ⊢ A ▻ A ∈ Univ i ->
@@ -1115,6 +1154,16 @@ Lemma WB_App' Γ A i B B' M M' N N' U :
   (* ------------------------ *)
   Γ ⊢ App B M N ▻β App B' M' N' ∈ U.
 Proof. move => ->. apply WB_App. Qed.
+
+Lemma WE_App' Γ A i B B' M M' N N' U :
+  U = B[N..] ->
+  Γ ⊢ A ▻ A ∈ Univ i ->
+  A :: Γ ⊢ B ▻η B' ∈ Univ i ->
+  Γ ⊢ M ▻η M' ∈ Pi A B ->
+  Γ ⊢ N ▻η N' ∈ A ->
+  (* ------------------------ *)
+  Γ ⊢ App B M N ▻η App B' M' N' ∈ U.
+Proof. move => ->. apply WE_App. Qed.
 
 Lemma WB_Beta' Γ A i B M M' N N' U0 U1 :
   U0 = M'[N'..] ->
@@ -1185,21 +1234,6 @@ Proof.
     eauto with wt.
 Qed.
 
-Lemma wt_β_morphing :
-  (forall Γ a b A, Γ ⊢ a ▻β b ∈ A -> forall ρ Δ,
-        β_morphing_ok ρ Γ Δ -> Wf Δ -> Δ ⊢ a[ρ] ▻β b[ρ] ∈ A[ρ] ).
-Proof.
-  move => Γ a b A ha.
-  elim : Γ a b A / ha => /=; eauto with bred.
-  - move => Γ i A A' B B' hA ihA hB ihB ρ Δ hρ hΔ.
-    constructor; eauto. apply ihB.
-    qauto l:on use:βmorphing_up.
-    econstructor; eauto.
-    apply WtBRed_embed. apply ihA; eauto.
-  - move => Γ A A' i B M M' hA ihA hB hM ihM ρ Δ hρ hΔ.
-    apply : WB_Lam; eauto.
-best use:good_morphing_up, β_morphing_ok_embed, wt_morphing_mutual.
-Admitted.
 
 Lemma β_lh_refl Γ a b A :
   Γ ⊢ a ▻ b ∈ A ->
@@ -1225,6 +1259,116 @@ Proof.
   - hauto lq:on use:WE_Conv, WE_Exp.
 Qed.
 
+Lemma morphing_ok_β_embed ρ Γ Δ :
+  lookup_good_morphing ρ Γ Δ -> β_morphing_ok ρ Γ Δ.
+Proof.
+  rewrite /lookup_good_morphing /β_morphing_ok.
+  sfirstorder use:β_lh_refl.
+Qed.
+
+Lemma wt_β_morphing :
+  (forall Γ a b A, Γ ⊢ a ▻β b ∈ A -> forall ρ Δ,
+        β_morphing_ok ρ Γ Δ -> Wf Δ -> Δ ⊢ a[ρ] ▻β b[ρ] ∈ A[ρ] ).
+Proof.
+  move => Γ a b A ha.
+  elim : Γ a b A / ha => /=; eauto with bred.
+  - move => Γ i A A' B B' hA ihA hB ihB ρ Δ hρ hΔ.
+    constructor; eauto. apply ihB.
+    qauto l:on use:βmorphing_up.
+    econstructor; eauto.
+    apply WtBRed_embed. apply ihA; eauto.
+  - move => Γ A A' i B M M' hA ihA hB hM ihM ρ Δ hρ hΔ.
+    have hΔ' : ⊢ A [ρ] :: Δ.
+    econstructor; eauto. hauto lq:on use:β_morphing_ok_embed, WtBRed_embed db:wt.
+    apply : WB_Lam; eauto.
+    sauto lq:on use:good_morphing_up, β_morphing_ok_embed, wt_morphing_univ.
+    sauto lq:on use:βmorphing_up.
+  - move => Γ A i B B' M M' N N' hA hB ihB hM ihM hN ihN ρ Δ hρ hΔ [:tr0].
+    apply : WB_App'; eauto. by asimpl.
+    apply : wt_morphing_univ; eauto.
+    hauto lq:on use:β_morphing_ok_embed.
+    apply ihB. apply : βmorphing_up=>//.
+    apply : β_lh_refl; eauto.
+    abstract : tr0.
+    hauto lq:on use:β_morphing_ok_embed, wt_morphing_univ.
+    econstructor; eauto.
+    apply tr0.
+  - move => Γ A i B M M' N N' hA hB hM ihM hN ihN ρ Δ hρ hΔ [:tr0] [:tr1].
+    apply : WB_Beta'; eauto; cycle 2.
+    abstract : tr0.
+    have /β_lh_refl hA' := hA.
+    hauto lq:on use:β_morphing_ok_embed, wt_morphing_univ.
+    apply : wt_morphing_univ; eauto.
+    apply : good_morphing_up; eauto. by apply β_morphing_ok_embed.
+    apply tr0.
+    abstract : tr1.
+    econstructor. apply tr0.
+    apply ihM.
+    apply : βmorphing_up; eauto.
+    apply /β_lh_refl /tr0. apply /tr1.
+    by asimpl.
+    by asimpl.
+  - move => Γ M N A B hM ihM hC ρ Δ hρ hΔ.
+    apply : WB_Conv; eauto.
+    sfirstorder use:equiv_morphing, β_morphing_ok_embed.
+Qed.
+
+Lemma wt_η_morphing :
+  (forall Γ a b A, Γ ⊢ a ▻η b ∈ A -> forall ρ Δ,
+        lookup_good_morphing ρ Γ Δ -> Wf Δ -> Δ ⊢ a[ρ] ▻η b[ρ] ∈ A[ρ] ).
+Proof.
+  move => Γ a b A ha.
+  elim : Γ a b A / ha.
+  - move => Γ n A hΓ hn. sfirstorder use:η_lh_refl.
+  - hauto q:on use:good_morphing_up, wt_morphing_univ db:eexp.
+  - hauto q:on use:good_morphing_up, wt_morphing_univ, WtExp_embed db:eexp, wt.
+  - hauto q:on use:good_morphing_up, wt_morphing_univ, WtExp_embed db:eexp, wt.
+  - move => *.
+    apply : WE_App'; eauto using wt_morphing_univ. rewrite -/subst_tm.
+    by asimpl. rewrite -/subst_tm.
+    qauto l:on use:good_morphing_up, WtExp_embed, wt_morphing_univ db:wt, eexp.
+  - move => Γ a b A A' i B B' hA ihA hB ihB ha iha ρ Δ hρ hΔ /=.
+    apply : WE_Eta'; eauto using good_morphing_up with wt; cycle 1.
+    apply ihB. hauto lq:on use:good_morphing_up, wt_morphing_univ, WtExp_embed db:wt, eexp.
+    hauto lq:on use:good_morphing_up, wt_morphing_univ, WtExp_embed db:wt, eexp.
+    by asimpl.
+  - hauto lq:on use:equiv_morphing, WE_Conv.
+Qed.
+
+Lemma βη_lh_refl Γ a b A :
+  Γ ⊢ a ▻ b ∈ A ->
+  URed Γ a a A.
+Proof. sfirstorder inv:URed use:β_lh_refl, η_lh_refl. Qed.
+
+Lemma βCtx_conv A B Γ M N C (h : A :: Γ ⊢ M ▻β N ∈ C) (h1 : Γ ⊢ A ≡ B)
+  (h2 : ⊢ B :: Γ) :
+  B :: Γ ⊢ M ▻β N ∈ C.
+Proof.
+  move /wt_β_morphing /(_ var_tm) : h. asimpl. apply=>//.
+  apply /morphing_ok_β_embed /lookup_good_id; eauto.
+  move : h1. apply Equiv_sym.
+Qed.
+
+Lemma ηCtx_conv A B Γ M N C (h : A :: Γ ⊢ M ▻η N ∈ C) (h1 : Γ ⊢ A ≡ B)
+  (h2 : ⊢ B :: Γ) :
+  B :: Γ ⊢ M ▻η N ∈ C.
+Proof.
+  move /wt_η_morphing /(_ var_tm) : h. asimpl. apply=>//.
+  apply /lookup_good_id; eauto.
+  move : h1. apply Equiv_sym.
+Qed.
+
+Lemma βCtx_step A B i Γ M N C (h : A :: Γ ⊢ M ▻β N ∈ C) (h1 : Γ ⊢ A ▻ B ∈ Univ i) :
+  B :: Γ ⊢ M ▻β N ∈ C.
+Proof.
+  apply : βCtx_conv; eauto with wt bred.
+Qed.
+
+Lemma ηCtx_step A B i Γ M N C (h : A :: Γ ⊢ M ▻η N ∈ C) (h1 : Γ ⊢ A ▻ B ∈ Univ i) :
+  B :: Γ ⊢ M ▻η N ∈ C.
+Proof.
+  apply : ηCtx_conv; eauto with wt bred.
+Qed.
 
 Lemma Prod_congU0 Γ A A' B B' i :
   URed Γ A A' (Univ i) ->
@@ -1239,16 +1383,49 @@ Proof.
     apply U_Once.
     apply U_η.
     constructor. hauto lq:on use:WtBRed_embed, η_lh_refl, rh_refl_mutual.
-
-    apply
-    best use:lh_refl_mutual.
+    hauto lq:on use:ηCtx_step, WtBRed_embed.
+  - apply : U_Step.
+    apply U_η. constructor; eauto.
+    hauto lq:on use:η_lh_refl, WtBRed_embed.
+    apply U_Once.
+    apply U_β.
+    constructor. hauto lq:on use:WtExp_embed, β_lh_refl, rh_refl_mutual.
+    hauto lq:on use:βCtx_step, WtExp_embed.
+  - hauto lq:on use:U_Onceη ctrs:WtExp.
+Qed.
 
 Lemma Prod_congU Γ A A' B B' i :
   UReds Γ A A' (Univ i) ->
   UReds (A :: Γ) B B' (Univ i) ->
   UReds Γ (Pi A B) (Pi A' B') (Univ i).
 Proof.
-Admitted.
+  move E : (Univ i) => u hu.
+  move : i E.
+  elim : A A' u / hu.
+  - move => a A ha + + h1.
+    move : ha.
+    elim : B B' A / h1.
+    + move => A B hA hB i ?. subst.
+      apply U_Refl.
+      eauto with wt.
+    + rename a into U.
+      move => A0 A1 A2 T h0 h1 ih1 hU i ?. subst.
+      have {}/ih1 := hU => ih1.
+      spec_refl.
+      apply : UReds_transitive; eauto.
+      move {ih1}.
+      apply Prod_congU0 => //.
+      eauto using βη_lh_refl.
+  - move => A A' A'' Q hA hA' ih i h.
+    move => h1.
+    move : hA hA' ih h.
+    elim : B B' Q / h1.
+    + move => B U.
+
+
+
+
+  elim E : A A' (Univ i) / h.
 
 Lemma WtRed_UReds Γ a b A :
   Γ ⊢ a ▻ b ∈ A ->
