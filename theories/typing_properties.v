@@ -1394,40 +1394,101 @@ Proof.
   - hauto lq:on use:U_Onceη ctrs:WtExp.
 Qed.
 
+Lemma wt_βη_morphing :
+  (forall Γ a b A, URed Γ a b A -> forall ρ Δ,
+        lookup_good_morphing ρ Γ Δ -> Wf Δ -> URed Δ (a[ρ]) (b[ρ]) A[ρ] ).
+Proof.
+  move => Γ a b A [h|h].
+  - move => ρ Δ hρ hΔ. apply U_β.
+    sfirstorder use:morphing_ok_β_embed, wt_β_morphing.
+  - move => ρ Δ hρ hΔ. apply U_η.
+    sfirstorder use:wt_η_morphing.
+Qed.
+
+Lemma βηCtx_conv A B Γ M N C (h : URed (A :: Γ) M N C) (h1 : Γ ⊢ A ≡ B)
+  (h2 : ⊢ B :: Γ) :
+  URed (B :: Γ) M N C.
+Proof.
+  move /wt_βη_morphing /(_ var_tm) : h. asimpl. apply=>//.
+  apply /lookup_good_id; eauto.
+  move : h1. apply Equiv_sym.
+Qed.
+
+Lemma URed_embed Γ a b A :
+  URed Γ a b A ->
+  Γ ⊢ a ▻ b ∈ A.
+Proof. sfirstorder inv:URed use:WtBRed_embed, WtExp_embed. Qed.
+
+Lemma βηCtx_step A B i Γ M N C (h : URed (A :: Γ) M N C) (h1 : URed Γ A B (Univ i)) :
+  URed (B :: Γ) M N C.
+Proof.
+  apply : βηCtx_conv; eauto using URed_embed with wt.
+Qed.
+
+Lemma Prod_congU1 Γ A A' B  i :
+  UReds Γ A A' (Univ i) ->
+  A :: Γ ⊢ B ∈ Univ i ->
+  UReds Γ (Pi A B) (Pi A' B) (Univ i).
+Proof.
+  move E : (Univ i) => u hu.
+  move : i E.
+  elim : A A' u / hu.
+  - move => A ? ha + + h1.
+    move => i ?. subst.
+    apply U_Refl.
+    eauto with wt.
+  - move => A0 A1 A2 T h0 h1 ih1 i ?. subst.
+    spec_refl.
+    move => h2.
+    apply : UReds_transitive; eauto.
+    apply Prod_congU0 => //; eauto using βη_lh_refl.
+    apply ih1.
+    apply : Ctx_step; eauto using URed_embed.
+Qed.
+
+Lemma Prod_congU2 Γ A B B' i :
+  Γ ⊢ A ∈ Univ i ->
+  UReds (A :: Γ) B B' (Univ i) ->
+  UReds Γ (Pi A B) (Pi A B') (Univ i).
+Proof.
+  move => hA.
+  move E : (Univ i) => U hu.
+  move : E.
+  elim : B B' U  /hu.
+  - move => B ? hB ?. subst.
+    apply U_Once.
+    apply : βη_lh_refl; eauto with wt.
+  - move => B B' B'' ? h0 h1 ih ?. subst. spec_refl.
+    apply : UReds_transitive; eauto.
+    apply Prod_congU0;
+    eauto using βη_lh_refl.
+Qed.
+
+Lemma UReds_embed Γ a b A :
+  UReds Γ a b A ->
+  Γ ⊢ a ▻+ b ∈ A.
+Proof.
+  move => h. elim : a b A / h=>//; eauto with wt.
+  hauto lq:on use:URed_embed db:wt.
+Qed.
+
+Lemma UReds_wt Γ a b A :
+  UReds Γ a b A ->
+  Γ ⊢ a ∈ A /\ Γ ⊢ b ∈ A.
+Proof.
+  hauto lq:on use:UReds_embed, lh_refl_mutual, rh_refl_mutual.
+Qed.
+
 Lemma Prod_congU Γ A A' B B' i :
   UReds Γ A A' (Univ i) ->
   UReds (A :: Γ) B B' (Univ i) ->
   UReds Γ (Pi A B) (Pi A' B') (Univ i).
 Proof.
-  move E : (Univ i) => u hu.
-  move : i E.
-  elim : A A' u / hu.
-  - move => a A ha + + h1.
-    move : ha.
-    elim : B B' A / h1.
-    + move => A B hA hB i ?. subst.
-      apply U_Refl.
-      eauto with wt.
-    + rename a into U.
-      move => A0 A1 A2 T h0 h1 ih1 hU i ?. subst.
-      have {}/ih1 := hU => ih1.
-      spec_refl.
-      apply : UReds_transitive; eauto.
-      move {ih1}.
-      apply Prod_congU0 => //.
-      eauto using βη_lh_refl.
-  - move => A A' A'' Q hA hA' ih i h.
-    move => h1.
-    move : hA hA' ih h.
-    elim : B B' Q / h1.
-    + move => B U hB hA hA' ih ?. subst. spec_refl.
-      apply : UReds_transitive; eauto.
-      apply Prod_congU0; eauto.
-      sfirstorder use:βη_lh_refl.
-      apply ih.
-      apply U_Once.
-Admitted.
-
+  move => hA hB.
+  apply : UReds_transitive.
+  apply Prod_congU2; hauto lq:on use:UReds_wt.
+  apply Prod_congU1; eauto. hauto l:on use:UReds_wt.
+Qed.
 
 Lemma WtRed_UReds Γ a b A :
   Γ ⊢ a ▻ b ∈ A ->
@@ -1437,11 +1498,10 @@ Proof.
   elim : Γ a b A / h.
   - move => Γ n A hΓ hn. by apply /U_Once /U_β /WB_Var.
   - move => Γ i hΓ. by apply /U_Once /U_β /WB_Univ.
-  - move => Γ i A A' B B' hA ihA hB ihB.
-    by apply Prod_congU.
+  - eauto using Prod_congU.
   - move => Γ A A' i B M M'.
+    admit.
 Admitted.
-
 
 Lemma wr_diamond : forall Γ M N A P B, Γ ⊢ M ▻ N ∈ A -> Γ ⊢ M ▻ P ∈ B -> exists Q, Γ ⊢ N ▻ Q ∈ B /\ Γ ⊢ P ▻ Q ∈ A.
 Proof.
@@ -1450,7 +1510,6 @@ Proof.
   - move => Γ n A hΓ hn P B /[dup] h' /Var_inv.
     move => [A0 [h0 h1]].
     have ? : A0 = A by sfirstorder use:lookup_deter. subst.
-
     exists (var_tm n).  split.
     best use:
 
