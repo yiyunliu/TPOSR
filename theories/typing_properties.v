@@ -1503,38 +1503,108 @@ Proof.
     admit.
 Admitted.
 
-Lemma wr_diamond : forall Γ M N A P B, Γ ⊢ M ▻ N ∈ A -> Γ ⊢ M ▻ P ∈ B -> exists Q, Γ ⊢ N ▻ Q ∈ B /\ Γ ⊢ P ▻ Q ∈ A.
+Module BInv.
+  Lemma Var_inv Γ n N T (h : Γ ⊢ var_tm n ▻β N ∈ T) :
+    exists A, N = var_tm n /\ lookup n Γ A /\ Γ ⊢ A ≡ T .
+  Proof.
+    move E : (var_tm n) h => M h.
+    move : n E.
+    elim : Γ M N T / h=>//.
+    - hauto lq:on use:lookup_wf db:wt.
+    - move => Γ M N A B hM ihM hE n ?. subst.
+      spec_refl. hauto lq:on db:wt.
+  Qed.
+
+  Lemma Univ_inv Γ i N T (h : Γ ⊢ Univ i ▻β N ∈ T) :
+    N = Univ i /\ Γ ⊢ Univ (S i) ≡ T.
+  Proof.
+    move E : (Univ i) h => M h.
+    move : i E.
+    elim : Γ M N T / h=>//; try hauto lq:on rew:off db:wt.
+  Qed.
+
+  Lemma Prod_inv Γ A B N T (h : Γ ⊢ Pi A B ▻β N ∈ T) :
+    exists A' B' i, N = Pi A' B' /\ Γ ⊢ A ▻β A' ∈ Univ i /\ A::Γ ⊢ B ▻β B' ∈ Univ i /\ Γ ⊢ Univ i ≡ T.
+  Proof.
+    move E : (Pi A B) h => M h.
+    move : A B E.
+    elim : Γ M N T / h=>//.
+    - move => Γ i A A' B B' hA _ hB _ A0 B0 [*]. subst.
+      exists A',B',i. repeat split => //=.
+      hauto lq:on use:Wt_Wf_mutual, WtBRed_embed db:wt.
+    - hauto lq:on db:wt.
+  Qed.
+
+  Lemma Lam_inv Γ A M N T (h : Γ ⊢ Lam A M ▻β N ∈ T) :
+    exists A' M' B i,
+      N = Lam A' M' /\
+      Γ ⊢ A ▻β A' ∈ Univ i /\
+        A::Γ ⊢ B ∈ Univ i /\
+        A::Γ ⊢ M ▻β M' ∈ B /\
+        Γ ⊢ Pi A B ≡ T.
+  Proof.
+    move E : (Lam A M) h => M0 h.
+    move : A M E.
+    elim : Γ M0 N T / h=>//.
+    - hauto lq:on use:Wt_Wf_mutual, WtBRed_embed db:wt.
+    - hauto lq:on rew:off db:wt.
+  Qed.
+
+End BInv.
+
+Lemma WB_Conv' Γ M N A B :
+  Γ ⊢ M ▻β N ∈ A ->
+  Γ ⊢ B ≡ A ->
+  (* ----------------- *)
+  Γ ⊢ M ▻β N ∈ B.
+Proof. sfirstorder use:WB_Conv, Equiv_sym. Qed.
+
+#[export]Hint Resolve βCtx_step : bred.
+
+Lemma wr_diamond : forall Γ M N A P B, Γ ⊢ M ▻β N ∈ A -> Γ ⊢ M ▻β P ∈ B -> exists Q, Γ ⊢ N ▻β Q ∈ B /\ Γ ⊢ P ▻β Q ∈ A.
 Proof.
   move => Γ M N A + + h.
   elim : Γ M N A / h.
-  - move => Γ n A hΓ hn P B /[dup] h' /Var_inv.
+  - move => Γ n A hΓ hn P B /[dup] h' /BInv.Var_inv.
     move => [A0 [h0 h1]].
     have ? : A0 = A by sfirstorder use:lookup_deter. subst.
-    exists (var_tm n).  split.
-    best use:
-
-hauto lq:on rew:off ctrs:WtRed use:Var_inv.
-  - qauto l:on ctrs:WtRed use:Univ_inv.
-  - move => Γ i A A' B B' hA ihA hB ihB P B0 /Prod_inv.
+    hauto lq:on db:bred.
+  - qauto l:on ctrs:WtBRed use:BInv.Univ_inv.
+  - move => Γ i A A' B B' hA ihA hB ihB P B0 /BInv.Prod_inv.
     move => [A'0][B'0][i0][?][h0][h1]h2. subst.
     move /ihA : (h0) => [A''][hA0]hA1.
     move /ihB : (h1) => [B''][hB0]hB1.
     exists (Pi A'' B'').
-    split; eauto with wt.
-    apply WR_Conv' with (A := Univ i0)=>//.
-    eauto with wt.
-  - move => Γ A A' i B M M' hA ihA hB ihB hM ihM P B0 /Lam_inv.
-    move => [A'0][M'0][B1][i0][?][h0][h1][h2]h3. subst.
+    split; eauto with bred.
+    apply WB_Conv' with (A := Univ i0)=>//.
+    by eauto using WtBRed_embed with bred.
+    by eauto using Equiv_sym.
+    by eauto using WtBRed_embed with bred.
+  - move => Γ A A' i B M M' hA ihA hB hM ihM P B0 /BInv.Lam_inv.
+    move => [A'0][M'0][B1][i0][?][h0][h1][h2]/Equiv_sym h3. subst.
     move /ihA : (h0) => [A''][hA0]hA1.
     move /ihM : (h2) => [M''][hM0]hM1.
     exists (Lam A'' M'').
-    split; eauto with wt.
-    + apply WR_Conv' with (A := Pi A' B1)=>//.
-      by eauto with wt.
-      by eauto using exchange with wt.
-    + apply WR_Conv' with (A := Pi A'0 B).
-      by eauto with wt.
-      by eauto using exchange with wt.
+    split; eauto with bred.
+    + apply WB_Conv' with (A := Pi A' B1)=>//.
+      apply : WB_Lam; eauto using WtBRed_embed with bred.
+      apply : Ctx_step; eauto. sfirstorder use:WtBRed_embed.
+      apply : WE_Trans; eauto.
+      apply : WE_Red.
+      move /WtBRed_embed in hA.
+      constructor; eauto.
+      suff : i0 = i by congruence.
+      apply WtBRed_embed in h0.
+      eauto using unique_sorts_mutual.
+    + apply WB_Conv' with (A := Pi A'0 B).
+      apply : WB_Lam; eauto using WtBRed_embed with bred.
+      apply : Ctx_step; eauto. sfirstorder use:WtBRed_embed.
+      apply : WE_Red.
+      constructor; eauto.
+      apply WtBRed_embed in h0.
+      suff : i0 = i by congruence.
+      apply WtBRed_embed in hA.
+      eauto using unique_sorts_mutual.
   - move => Γ A A' i B B' M M' N N' hA ihA hB ihB hM ihM hN ihN P B0 /App_inv.
     move => [A0][A'0][B'0][Q'][i0][h0][h1][h2][h3][].
     + move => [M0][?][hM0]?. subst.
