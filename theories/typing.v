@@ -50,9 +50,8 @@ Inductive WtRed : context -> tm -> tm -> tm -> Prop :=
   (* ------------------------ *)
   Γ ⊢ App B M N ▻ App B' M' N' ∈ B[N..]
 
-| WR_Beta Γ A i A' B B' M M' N N' :
+| WR_Beta Γ A i B B' M M' N N' :
   Γ ⊢ A ▻ A ∈ Univ i ->
-  Γ ⊢ A' ▻ A' ∈ Univ i ->
   A :: Γ ⊢ B ▻ B' ∈ Univ i ->
   A :: Γ ⊢ M ▻ M' ∈ B ->
   Γ ⊢ N ▻ N' ∈ A ->
