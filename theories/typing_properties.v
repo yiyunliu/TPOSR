@@ -1606,6 +1606,8 @@ Proof.
     eauto.
 Qed.
 
+
+
 Lemma Ctx_conv_simpl A B Γ M N C (h : A :: Γ ⊢ M ▻ N ∈ C) (h1 : Γ ⊢ A ≡ B) :
   B :: Γ ⊢ M ▻ N ∈ C.
 Proof.
@@ -1739,6 +1741,12 @@ Proof.
 Qed.
 
 
+
+Lemma βmorphing2_id Γ : ⊢ Γ -> βmorphing2_ok ids ids Γ Γ.
+  move => hΓ. rewrite /βmorphing2_ok.
+  asimpl. eauto with bred.
+Qed.
+
 Lemma β_diamond : forall Γ M N A P B, Γ ⊢ M ▻β N ∈ A -> Γ ⊢ M ▻β P ∈ B -> exists Q, Γ ⊢ N ▻β Q ∈ B /\ Γ ⊢ P ▻β Q ∈ A.
 Proof.
   move => Γ M N A + + h.
@@ -1863,60 +1871,84 @@ Proof.
       * rename Q' into N0.
         eapply WB_Conv with (A := B[N0..]); cycle 1.
         apply : WE_Exp. apply : WR_cong_univ; eauto using WtBRed_embed with bred wt.
-        (* Need morphing2 *)
-        admit.
-          (* last by apply : WR_cong_univ; eauto with wt. *)
-        (* apply WR_cong with (A := A); last by assumption. *)
-        (* apply : exchange. *)
-        (* move : hL2. *)
-        (* move /Ctx_conv. apply; eauto with wt. *)
-        (* apply : wr_rh_refl. *)
-        (* apply : Ctx_conv. *)
-        (* move : hM0; eauto. *)
-        (* eauto. eauto with wt. *)
+        have hΓ : ⊢ Γ by sfirstorder use:Wt_Wf_mutual.
+        have {}hL2 : A :: Γ ⊢ M0' ▻β M' ∈ B.
+        apply βCtx_conv with (A := A0); eauto using Equiv_sym with wt.
+        apply : βexchange; eauto.
+        apply WtBRed_embed in hM0.
+        sfirstorder use:wr_rh_refl.
+        apply : βmorphing2; eauto.
+        apply βmorphing2_ext. by apply βmorphing2_id. by asimpl.
   - move => Γ A i B M M' N N'  hA hB   hM ihM hN ihN ? T.
     move /BInv.App_inv => [A2]  [B1] [N0'][i0][hA2][hB1][hN'][hB2][].
     + move => [?][hA3]?. subst.
       move /BInv.Lam_inv : hA3 => [A0'][M0'][B'][i1][?][hA3][hB'][hM']heq. subst.
       move /ihM  : hM' {ihM} => [M''][hM0'']hM1''.
       move /ihN : (hN') {ihN} => [N''][hN0'']hN1''.
+      have hΓ' : ⊢ Γ by sfirstorder use:Wt_Wf_mutual.
       exists M''[N''..].
       split.
       * apply WB_Conv with (A := B[N'..]); eauto.
-        admit.
-        (* apply : WR_cong; eauto using exchange with wt. *)
-      (* apply : WR_cong_univ; eauto with wt. *)
+        apply : βmorphing2; eauto.
+        apply : βexchange; eauto.
+        qauto l:on use:wr_rh_refl,WtBRed_embed.
+        apply βmorphing2_ext. by apply βmorphing2_id.
+        asimpl.
+        apply : βexchange;eauto. hauto lq:on use:wr_rh_refl, WtBRed_embed.
         apply : WE_Trans; eauto.
         apply : WE_Exp; eauto. apply : WR_cong_univ; eauto using WtBRed_embed.
       * eapply WB_Conv with (A := B1[N0'..]).
-    (*     have ?  : Γ ⊢ A0 ▻ A0' ∈ Univ i by eauto using exchange with wt. *)
-    (*     have ? : Γ ⊢ A2 ▻ A' ∈ Univ i by eauto using exchange with wt. *)
-    (*     have ? : Γ ⊢ _A ▻+ A0' ∈ Univ i by eauto using WRs_TransR. *)
-    (*     have ? : Γ ⊢ _A ▻+ A' ∈ Univ i by eauto using WRs_TransR. *)
-    (*     have ? : Γ ⊢ A2 ≡ A0' by eauto using Conv_Equiv. *)
-    (*     have ? : Γ ⊢ A0 ≡ A2 by eauto using Conv_Equiv. *)
-    (*     have ? : Γ ⊢ A2 ≡ A0 by eauto using Equiv_sym. *)
-    (*     apply WR_Beta with (A0 := _A) (i := i); eauto 3 using exchange, WRs_TransR with wt. *)
-    (*     have ? : A2 :: Γ ⊢ B0 ▻ B0 ∈ Univ i by *)
-    (*       apply Ctx_conv with (A := A0); eauto 3 using exchange with wt. *)
-    (*     apply Ctx_conv with (A := A2); eauto 3 using exchange with wt. *)
-    (*     eapply Ctx_step with (A := A0); eauto. *)
-    (*     apply : WR_Red; eauto. *)
-    (*     apply Ctx_conv with (A := A2); eauto 3 with wt. *)
-    (*     apply : WR_cong_univ; eauto. *)
-    (* + move => [_A0][?][?][M0'][<-][[<- <-]][hM'][?][_hA2]_hA3. subst. *)
-    (*   move /ihM  : hM' {ihM} => [M''][hM0'']hM1''. *)
-    (*   move /ihN : (hN') {ihN} => [N''][hN0'']hN1''. *)
-    (*   exists M''[N''..]. split. *)
-    (*   * apply : WR_Conv'; eauto. *)
-    (*     apply : WR_Exp. *)
-    (*     apply : WR_cong; eauto using exchange with wt. *)
-    (*     apply : WR_cong_univ; eauto. *)
-    (*   * apply : WR_Exp. *)
-    (*     apply : WR_cong; eauto using exchange with wt. *)
-  (*     apply : WR_cong_univ; eauto using exchange. *)
-        admit.
-        admit.
-    + admit.
+        have ? : i1 = i by move : hA3 hA; clear;
+          hauto lq:on rew:off use:WtBRed_embed, unique_sorts_mutual.
+        subst.
+        have e0 : Γ ⊢ A2 ≡ A by sfirstorder use:βunique.
+        have e1 : Γ ⊢ A0' ≡ A by hauto lq:on use:WtBRed_embed db:wt.
+        have e2 : Γ ⊢ A2 ≡ A0' by hauto lq:on use:Equiv_sym, WE_Trans.
+        have ? : i0 = i by sfirstorder use:equiv_sort_unique. subst.
+
+        apply : WB_Beta; eauto.
+        hauto lq:on use:WtBRed_embed, rh_refl_mutual.
+        move /WtBRed_embed /wr_rh_refl in hB1.
+        sfirstorder use:Ctx_conv_simpl,Equiv_sym.
+        (* hM1'' *)
+        apply : βCtx_conv; eauto.
+        apply : βexchange ; eauto.
+        apply WtBRed_embed in hB1.
+        apply WE_Red in hB1.
+        apply : WR_Conv; eauto.
+        apply : Ctx_conv_simpl. apply : wr_lh_refl. apply /WtBRed_embed /hM1''. by apply Equiv_sym.
+        apply : βCtx_conv; eauto using Equiv_sym.
+        move : hN0'' hΓ'. clear. hauto lq:on use:WtBRed_embed, regularity db:wt.
+        hauto lq:on use:equiv_regularity0 db:wt.
+        hauto lq:on rew:off use:WB_Conv, Equiv_sym.
+        apply : WE_Exp; eauto.
+        apply : WR_cong_univ; eauto using WtBRed_embed.
+    + move => [_A0][M0'][[<- <-]][hM']?. subst.
+      move /ihM  : hM' {ihM} => [M''][hM0'']hM1''.
+      move /ihN : (hN') {ihN} => [N''][hN0'']hN1''.
+      have hΓ : ⊢ Γ by sfirstorder use:Wt_Wf_mutual.
+      have eA : Γ ⊢ A2 ≡ A by sfirstorder use:βunique.
+      have ? : i0 = i by sfirstorder use:equiv_sort_unique. subst.
+      exists M''[N''..]. split.
+      * apply WB_Conv with (A := B[N'..]); eauto.
+        apply : βmorphing2; eauto.
+
+        apply βmorphing2_ext. apply βmorphing2_id; eauto. asimpl.
+        apply : βexchange; eauto.
+        move /WtBRed_embed /wr_rh_refl  in hN'.
+        apply β_lh_refl in hN'.
+        move /WtBRed_embed /wr_lh_refl in hN0''.
+        sfirstorder use:WR_Conv, WR_Conv'.
+        apply : WE_Trans; eauto.
+        apply : WE_Exp.
+        apply : WR_cong_univ; eauto.
+        sfirstorder use:WtBRed_embed.
+      * apply WB_Conv with (A := B[N0'..]).
+        apply : βmorphing2; eauto.
+        apply βmorphing2_ext. by apply βmorphing2_id. by asimpl.
+        apply : WE_Exp.
+        (* apply : WR_cong; eauto using exchange with wt. *)
+        apply : WR_cong_univ; eauto using Equiv_sym  with bred.
+        hauto lq:on use:WtBRed_embed, Equiv_sym db:bred.
   - hauto lq:on db:wt,bred.
-Admitted.
+Qed.
