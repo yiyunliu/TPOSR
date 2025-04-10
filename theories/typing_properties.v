@@ -1594,6 +1594,67 @@ Proof. sfirstorder use:WB_Conv, Equiv_sym. Qed.
 
 #[export]Hint Resolve βCtx_step : bred.
 
+Lemma equiv_regularity0 Γ A B :
+  Γ ⊢ A ≡ B ->
+  exists i, Γ ⊢ A ∈ Univ i /\ Γ ⊢ B ∈ Univ i.
+Proof.
+  move => h. elim : A B /h.
+  - hauto l:on use:lh_refl_mutual, rh_refl_mutual.
+  - hauto l:on use:lh_refl_mutual, rh_refl_mutual.
+  - move => A B C h0 [i [h1 h2]] h5 [j [h3 h4]].
+    have ? : j = i by sfirstorder use:unique_sorts_mutual. subst.
+    eauto.
+Qed.
+
+Lemma Ctx_conv_simpl A B Γ M N C (h : A :: Γ ⊢ M ▻ N ∈ C) (h1 : Γ ⊢ A ≡ B) :
+  B :: Γ ⊢ M ▻ N ∈ C.
+Proof.
+  hauto lq:on use:Ctx_conv, equiv_regularity0 db:wt.
+Qed.
+
+Lemma equiv_to_equivhom Γ A B :
+  Γ ⊢ A ≡ B ->
+  exists i, Γ ⊢ A ≃ B ∈ i.
+Proof. hauto lq:on use:equiv_cast', equiv_regularity0. Qed.
+
+Lemma βunique Γ a b c A B : Γ ⊢ a ▻β b ∈ A -> Γ ⊢ a ▻β c ∈ B -> Γ ⊢ A ≡ B.
+Proof.
+  move /WtBRed_embed => h /WtBRed_embed h0.
+  hauto lq:on use:lh_refl_mutual, unique_mutual.
+Qed.
+
+Lemma equiv_sort_unique Γ A B i j : Γ ⊢ A ≡ B -> Γ ⊢ A ∈ Univ i -> Γ ⊢ B ∈ Univ j -> i = j.
+Proof.
+  move /equiv_regularity0 => [k][h0]h1 h2 h3.
+  qauto l:on use:unique_sorts_mutual.
+Qed.
+
+Lemma βexchange Γ a c A0 A1 :
+  Γ ⊢ a ∈ A0 ->
+  Γ ⊢ a ▻β c ∈ A1 ->
+  Γ ⊢ a ▻β c ∈ A0.
+Proof.
+  move => h0 h1.
+  have : Γ ⊢ A1 ≡ A0 by hauto lq:on use:WtBRed_embed, unique_mutual, lh_refl_mutual.
+  sfirstorder use:WB_Conv.
+Qed.
+
+Lemma βexchange' Γ a b c A0 A1 :
+  Γ ⊢ a ▻β b ∈ A0 ->
+  Γ ⊢ a ▻β c ∈ A1 ->
+  Γ ⊢ a ▻β c ∈ A0.
+Proof.
+  qauto l:on use:βexchange, WtBRed_embed, lh_refl_mutual, rh_refl_mutual.
+Qed.
+
+Lemma exchange' Γ a b A0 A1 :
+  Γ ⊢ a  ∈ A0 ->
+  Γ ⊢ a ▻ b ∈ A1 ->
+  Γ ⊢ b ∈ A0.
+Proof.
+  qauto lq:on use:rh_refl_mutual, exchange.
+Qed.
+
 Lemma β_diamond : forall Γ M N A P B, Γ ⊢ M ▻β N ∈ A -> Γ ⊢ M ▻β P ∈ B -> exists Q, Γ ⊢ N ▻β Q ∈ B /\ Γ ⊢ P ▻β Q ∈ A.
 Proof.
   move => Γ M N A + + h.
@@ -1639,25 +1700,35 @@ Proof.
       apply WtBRed_embed in hA.
       eauto using unique_sorts_mutual.
   - move => Γ A i B B' M M' N N' hA hB ihB hM ihM hN ihN P B0 /BInv.App_inv.
-    move => [A0][B'0][Q'][i0][h0][h1][h2][h3][].
+    move => [A0][B'0][Q'][i0][h0][h1][h2][h3].
+    have eA : Γ ⊢ A ≡ A0 by sfirstorder use:βunique.
+    have ? : i0 = i by hauto lq:on use:equiv_sort_unique. subst.
+    move => [].
     + move => [M0][hM0]?. subst.
       move /ihM : (hM0) => [M''][h4]h5 {ihM}.
       move /ihN : (h2) => [N0][h6]h7 {ihN}.
       (* move /ihA : (h0) => [A''][h8]h9. *)
-      have ? : i0 = i by admit. subst.
-      have {}h1 : A :: Γ ⊢ B ▻β B'0 ∈ Univ i by admit.
+      have {}h1 : A :: Γ ⊢ B ▻β B'0 ∈ Univ i by
+        apply : βCtx_conv; eauto using Equiv_sym with wt.
       move /ihB : (h1)  => [B''][h10]h11 {ihB}.
       exists (App B'' M'' N0). split.
       * apply WB_Conv with (A := B'[N'..]) => //.
-        apply WB_App with (i := i) (A := A); eauto. admit.
-        admit.
+        apply WB_App with (i := i) (A := A); eauto.
+        apply : βexchange; eauto.
+        have : Γ ⊢ M' ∈ Pi A B by hauto lq:on rew:off use:rh_refl_mutual, WtBRed_embed.
+        move /WtBRed_embed : hB hA. clear. move => h0 h1 h2. apply : WR_Conv; eauto.
+        apply : WE_Red; eauto. constructor; eauto.
+        hauto lq:on rew:off use:WB_Conv, Equiv_sym.
         apply : WE_Trans; eauto.
         apply Equiv_sym. apply : WE_Red.
         apply : WR_cong_univ; eauto. sfirstorder use:WtBRed_embed.
         sfirstorder use:WtBRed_embed.
       * apply WB_Conv with (A := B'0[Q'..]).
         eapply WB_App with (A := A) (i := i); eauto.
-        admit.
+        apply : βexchange; eauto. move {h5}.
+        have hk : Γ ⊢ M ▻β M0 ∈ Pi A B. apply : βexchange; eauto. hauto lq:on use:lh_refl_mutual, WtBRed_embed.
+        have {}hk : Γ ⊢ M0 ∈ Pi A B by qauto l:on use:WtBRed_embed, rh_refl_mutual.
+        apply : WR_Conv; eauto. apply : WE_Red; eauto using WtBRed_embed with wt.
         apply Equiv_sym.
         apply : WE_Red; eauto.
         eapply WR_cong_univ with (i := i); eauto using exchange, WtBRed_embed.
@@ -1665,41 +1736,44 @@ Proof.
       have hL : Γ ⊢ Lam A0 M0 ▻β Lam A0 M0' ∈ Pi A0 B.
       econstructor; eauto. sfirstorder use:β_lh_refl.
       hauto lq:on use:WtBRed_embed, lh_refl_mutual.
-      move /ihM : (hL) => [M''][hM1]/BInv.Lam_inv.
+      move /ihM : (hL) => [M''][hM1]/BInv.Lam_inv {ihM}.
       move => [A'1][M'0][B1][i1][?][hL0][hL1][hL2]hL3. subst.
       rename M'0 into M''.
       (* By uniqueness typing *)
-      have heq : Γ ⊢ A0 ≡ A by admit.
-      have : A :: Γ ⊢ B ▻β B'0 ∈ Univ i0.
-      apply βCtx_conv with (A := A0); by eauto using WtBRed_embed with wt.
+      (* have heq : Γ ⊢ A0 ≡ A by sfirstorder use:βunique. *)
+      have : A :: Γ ⊢ B ▻β B'0 ∈ Univ i.
+      apply βCtx_conv with (A := A0); by eauto using WtBRed_embed, Equiv_sym with wt.
       move /ihB => [B''][hB0]hB1.
       move /ihN : (h2) => [N''][hN0]hN1.
       move /BInv.Lam_inv : hM => [A'2] [ M'0][ B2] [i2][?] [hA0][hB2][hM2]he. subst.
       move /BInv.Lam_inv : hM1 => [A'3][M'][B3][i3][[? ?]][hA2][hB3][hM3]he'. subst.
-      have heq' : Γ ⊢ A ≡ A'2 by admit. (* by *)
-          (* move /Equiv_sym /WE_Trans : heq; apply;  eauto with wt. *)
-      (* have hh : A::Γ ⊢ B' ≡ B  by eauto with wt. *)
+      have heq' : Γ ⊢ A ≡ A'2.
+      move : hA0 eA. clear.
+      move /WtBRed_embed /WE_Exp. by eauto using Equiv_sym, WE_Trans.
+      have ? : i2 = i1 by move : hA0 hL0; clear; hauto lq:on use:unique_sorts_mutual, WtBRed_embed. subst.
+      have ? : i1 = i by move : h0 hL0; clear; hauto lq:on use:unique_sorts_mutual, WtBRed_embed. subst.
+      have ? : i3 = i by move /WtBRed_embed : hA2; move /WtBRed_embed : hA0; clear;
+        hauto lq:on use:unique_sorts_mutual, rh_refl_mutual. subst.
       exists M'[N''..].
       split.
       * apply WB_Conv with (A := B'[N'..]); eauto.
-        (* apply WR_Exp with (i := i) (A := B'[N'..]); cycle 1. *)
-        (* apply WR_cong_univ with (A := A); eauto. *)
-        have h : Γ ⊢ A0 ▻β A'2 ∈ Univ i0 by admit. (* eauto using exchange with wt. *)
-        apply WB_Beta with (i := i0);
+        apply WB_Beta with (i := i);
           eauto 4 using exchange, WRs_TransR, Ctx_conv with bred.
-        qauto l:on use:WtBRed_embed, rh_refl_mutual.
-        (* Need to know something about A'2 *)
-        admit.
-        admit.
-      (* Just exchange all the way from hM3-hM0 and the proof should be good *)
-        (* move /exchange : hM3. apply. *)
-        (* apply wr_rh_refl with (a := M0). *)
-        (* apply : Ctx_step; eauto. *)
-        (* move /exchange : hM2. apply. *)
-        (* apply wr_lh_refl with (b := M0'). *)
-        (* apply : WR_Conv; eauto. *)
-        (* apply : WE_Red. *)
-      (* apply : Ctx_conv; eauto using Equiv_sym with wt. *)
+        hauto lq:on use:WtBRed_embed, rh_refl_mutual.
+        have : A :: Γ ⊢ B' ∈ Univ i by move : hB0; clear; hauto lq:on use:WtBRed_embed, lh_refl_mutual.
+        move : heq'. clear. move => h0 h1.
+        apply : Ctx_conv; eauto with wt.
+        hauto lq:on use:equiv_regularity0 db:wt.
+        apply : βexchange; eauto.
+        apply : Ctx_conv_simpl; eauto. move {hM3}.
+        have {}hM2 : A :: Γ ⊢ M0 ▻ M'0 ∈ B2 by sfirstorder use:Ctx_conv_simpl, Equiv_sym, WtBRed_embed.
+        apply : exchange'; eauto.
+        have {}hM0 : A :: Γ ⊢ M0 ▻ M0' ∈ B by sfirstorder use:Ctx_conv_simpl, Equiv_sym, WtBRed_embed.
+        eapply lh_refl_mutual in hM0.
+        apply : WR_Conv; eauto.
+        apply : WE_Red; eauto using WtBRed_embed.
+        apply : WB_Conv; eauto.
+        apply /WE_Red /WtBRed_embed; eauto.
         apply : WE_Trans; eauto.
         apply : WE_Exp. apply WR_cong_univ with (A := A); eauto using WtBRed_embed.
       * rename Q' into N0.
