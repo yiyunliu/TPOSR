@@ -1946,16 +1946,31 @@ Qed.
 
 Module OExp.
   Inductive R Γ : tm -> tm -> tm -> Prop :=
-  | O_Eta a A i B  :
+  | O_Eta a A i B U :
+    Γ ⊢ A ∈ Univ i ->
+    A :: Γ ⊢ B ∈ Univ i ->
+    Γ ⊢ a ∈ Pi A B ->
+    Γ ⊢ Pi A B ≡ U ->
+    R Γ a  (Lam A (App (B⟨upRen_tm_tm shift⟩) (a⟨shift⟩) (var_tm var_zero))) U.
+
+  Lemma ToPar Γ a b A : OExp.R Γ a b A -> Γ ⊢ a ▻ b ∈ A.
+  Proof.
+    inversion 1; subst.
+    apply : WR_Conv; eauto.
+    hauto lq:on db:wt.
+  Qed.
+
+  Lemma O_Eta' Γ a A i B :
     Γ ⊢ A ∈ Univ i ->
     A :: Γ ⊢ B ∈ Univ i ->
     Γ ⊢ a ∈ Pi A B ->
     R Γ a  (Lam A (App (B⟨upRen_tm_tm shift⟩) (a⟨shift⟩) (var_tm var_zero))) (Pi A B).
-
-  Lemma ToPar Γ a b A : OExp.R Γ a b A -> Γ ⊢ a ▻ b ∈ A.
   Proof.
-    hauto lq:on inv:OExp.R db:wt.
+    move => hA hB ha.
+    apply : O_Eta; eauto.
+    apply : WE_Red; eauto with wt.
   Qed.
+
 End OExp.
 
 Module IExp.
@@ -2045,6 +2060,9 @@ Proof.
   - move => Γ a b A A' i B B' hA [A'' [ihA0 ihA1]] hB [B'' [ihB0 ihB1]] ha [a' [iha0 iha1]].
     exists a'. split => //.
     apply : OExps.StepR; eauto.
-    apply :
+    apply : OExp.O_Eta; eauto. hauto q:on use:WtExp_embed, wr_rh_refl.
+    admit.
+    admit.
+    admit.
   - hauto lq:on ctrs:IExp.R, OExps.R use:IExp.ToEPar, WtExp_embed db:wt, eexp.
-Qed.
+Admitted.
