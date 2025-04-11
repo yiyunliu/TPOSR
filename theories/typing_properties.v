@@ -1951,6 +1951,11 @@ Module OExp.
     A :: Γ ⊢ B ∈ Univ i ->
     Γ ⊢ a ∈ Pi A B ->
     R Γ a  (Lam A (App (B⟨upRen_tm_tm shift⟩) (a⟨shift⟩) (var_tm var_zero))) (Pi A B).
+
+  Lemma ToPar Γ a b A : OExp.R Γ a b A -> Γ ⊢ a ▻ b ∈ A.
+  Proof.
+    hauto lq:on inv:OExp.R db:wt.
+  Qed.
 End OExp.
 
 Module IExp.
@@ -1993,10 +1998,53 @@ Module IExp.
     Γ ⊢ A ≡ B ->
     (* ----------------- *)
     R Γ M N B.
+
+  Lemma ToEPar Γ a b A : R Γ a b A -> Γ ⊢ a ▻η b ∈ A.
+  Proof. induction 1; eauto with eexp. Qed.
+
 End IExp.
+
+Module OExps.
+  Inductive R Γ a : tm -> tm -> Prop :=
+  | Refl A : Γ ⊢ a ∈ A -> R Γ a a A
+  | Step b c A : OExp.R Γ a b A -> R Γ b c A -> R Γ a c A.
+
+  Lemma transitive Γ a b c A :
+    R Γ a b A -> R Γ b c A -> R Γ a c A.
+  Proof. induction 1; hauto lq:on ctrs:R. Qed.
+
+  Lemma Once Γ a b A :
+    OExp.R Γ a b A ->
+    OExps.R Γ a b A.
+  Proof.
+    move => h. apply : Step; eauto. qauto l:on use:OExp.ToPar, wr_rh_refl, Refl.
+  Qed.
+
+  Lemma StepR Γ a b c A : R Γ a b A -> OExp.R Γ b c A -> R Γ a c A.
+  Proof. hauto lq:on ctrs:R use:transitive, Once. Qed.
+
+End OExps.
+
+
 
 Lemma factorization Γ a c A :
   Γ ⊢ a ▻η c ∈ A ->
-  exists b, IExp.R Γ a b A /\ OExp.R Γ b c A.
+  exists b, IExp.R Γ a b A /\ OExps.R Γ b c A.
 Proof.
-Admitted.
+  move => h. elim : Γ a c A /h.
+  - move => Γ n A hΓ hn.
+    exists (var_tm n).
+    split. by constructor. apply OExps.Refl.
+    by constructor.
+  - move => Γ i hΓ.
+    eexists. split. by econstructor.
+    eauto using OExps.Refl with wt.
+  - hauto lq:on ctrs:IExp.R, OExps.R use:IExp.ToEPar, WtExp_embed db:wt, eexp.
+  - hauto lq:on ctrs:IExp.R, OExps.R use:IExp.ToEPar, WtExp_embed db:wt, eexp.
+  - hauto lq:on ctrs:IExp.R, OExps.R use:IExp.ToEPar, WtExp_embed db:wt, eexp.
+  - move => Γ a b A A' i B B' hA [A'' [ihA0 ihA1]] hB [B'' [ihB0 ihB1]] ha [a' [iha0 iha1]].
+    exists a'. split => //.
+    apply : OExps.StepR; eauto.
+    apply :
+  - hauto lq:on ctrs:IExp.R, OExps.R use:IExp.ToEPar, WtExp_embed db:wt, eexp.
+Qed.
