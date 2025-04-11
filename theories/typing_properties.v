@@ -963,15 +963,6 @@ Proof.
 Qed.
 
 Notation "Γ ⊢ a ∈  A" := (Γ ⊢ a ▻ a ∈ A) (at level 70, no associativity).
-Reserved Notation "Γ ⊢ a ▻η b ∈  A" (at level 70, no associativity).
-
-Inductive OExp Γ : tm -> tm -> tm -> Prop :=
-| O_Eta a A A' i B B'  :
-  Γ ⊢ A ▻ A' ∈ Univ i ->
-  A :: Γ ⊢ B ▻ B' ∈ Univ i ->
-  Γ ⊢ a ▻ a ∈ Pi A B ->
-  Γ ⊢ a ▻η Lam A' (App (B'⟨upRen_tm_tm shift⟩) (a⟨shift⟩) (var_tm var_zero)) ∈ Pi A B
-where  "Γ ⊢ a ▻η b ∈  A" := (OExp Γ a b A).
 
 
 Reserved Notation "Γ ⊢ a ▻β b ∈  A" (at level 70, no associativity).
@@ -1952,3 +1943,54 @@ Proof.
         hauto lq:on use:WtBRed_embed, Equiv_sym db:bred.
   - hauto lq:on db:wt,bred.
 Qed.
+
+Module OExp.
+  Inductive R Γ : tm -> tm -> tm -> Prop :=
+  | O_Eta a A i B  :
+    Γ ⊢ A ∈ Univ i ->
+    A :: Γ ⊢ B ∈ Univ i ->
+    Γ ⊢ a ∈ Pi A B ->
+    R Γ a  (Lam A (App (B⟨upRen_tm_tm shift⟩) (a⟨shift⟩) (var_tm var_zero))) (Pi A B).
+End OExp.
+
+Module IExp.
+  Inductive R : context -> tm -> tm -> tm -> Prop :=
+  | I_Var Γ n A :
+    ⊢ Γ ->
+    lookup n Γ A ->
+    (* ------------- *)
+    R Γ (var_tm n) (var_tm n) A
+
+  | I_Univ Γ i :
+    ⊢ Γ ->
+    (* ----------- *)
+    R Γ (Univ i) (Univ i) (Univ (S i))
+
+  | I_Prod Γ i A A' B B' :
+    Γ ⊢ A ▻η A' ∈ Univ i ->
+    A :: Γ ⊢ B ▻η B' ∈ Univ i ->
+    (* ------------------- *)
+    R Γ (Pi A B) (Pi A' B') (Univ i)
+
+  | I_Lam Γ A A' i B M M' :
+    Γ ⊢ A ▻η A' ∈ Univ i ->
+    A :: Γ ⊢ B ▻η B ∈ Univ i ->
+    A :: Γ ⊢ M ▻η M' ∈ B ->
+    (* ------------------ *)
+    R Γ (Lam A M) (Lam A' M') (Pi A B)
+
+  | I_App Γ A i B B' M M' N N' :
+    Γ ⊢ A ▻ A ∈ Univ i ->
+    A :: Γ ⊢ B ▻η B' ∈ Univ i ->
+    Γ ⊢ M ▻η M' ∈ Pi A B ->
+    Γ ⊢ N ▻η N' ∈ A ->
+    (* ------------------------ *)
+    R Γ (App B M N) (App B' M' N') B[N..]
+
+
+  | I_Conv Γ M N A B :
+    Γ ⊢ M ▻η N ∈ A ->
+    Γ ⊢ A ≡ B ->
+    (* ----------------- *)
+    R Γ M N B.
+End IExp.
