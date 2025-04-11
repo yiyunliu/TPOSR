@@ -1632,6 +1632,26 @@ Proof.
   sfirstorder use:WB_Conv.
 Qed.
 
+Lemma ηexchange Γ a c A0 A1 :
+  Γ ⊢ a ∈ A0 ->
+  Γ ⊢ a ▻η c ∈ A1 ->
+  Γ ⊢ a ▻η c ∈ A0.
+Proof.
+  move => h0 h1.
+  have : Γ ⊢ A1 ≡ A0 by hauto lq:on use:WtExp_embed, unique_mutual, lh_refl_mutual.
+  sfirstorder use:WE_Conv.
+Qed.
+
+Lemma ηexchange'' Γ a c A0 A1 :
+  Γ ⊢ a ∈ A0 ->
+  Γ ⊢ a ▻η c ∈ A1 ->
+  Γ ⊢ a ▻η c ∈ A0.
+Proof.
+  move => h0 h1.
+  have : Γ ⊢ A1 ≡ A0 by hauto lq:on use:WtExp_embed, unique_mutual, lh_refl_mutual.
+  sfirstorder use:WE_Conv.
+Qed.
+
 Lemma βexchange' Γ a b c A0 A1 :
   Γ ⊢ a ▻β b ∈ A0 ->
   Γ ⊢ a ▻β c ∈ A1 ->
@@ -1960,6 +1980,13 @@ Module OExp.
     hauto lq:on db:wt.
   Qed.
 
+  Derive Inversion inv with (forall Γ a b A, R Γ a b A).
+
+  Lemma regularity Γ a b A : R Γ a b A -> Γ ⊢ a ∈ A /\ Γ ⊢ b ∈ A.
+  Proof.
+    qauto l:on use:ToPar, lh_refl_mutual, rh_refl_mutual.
+  Qed.
+
   Lemma O_Eta' Γ a A i B :
     Γ ⊢ A ∈ Univ i ->
     A :: Γ ⊢ B ∈ Univ i ->
@@ -2024,6 +2051,12 @@ Module OExps.
   | Refl A : Γ ⊢ a ∈ A -> R Γ a a A
   | Step b c A : OExp.R Γ a b A -> R Γ b c A -> R Γ a c A.
 
+
+  Lemma regularity Γ a b A : R Γ a b A -> Γ ⊢ a ∈ A /\ Γ ⊢ b ∈ A.
+  Proof.
+    induction 1; hauto l:on use:OExp.regularity.
+  Qed.
+
   Lemma transitive Γ a b c A :
     R Γ a b A -> R Γ b c A -> R Γ a c A.
   Proof. induction 1; hauto lq:on ctrs:R. Qed.
@@ -2039,8 +2072,6 @@ Module OExps.
   Proof. hauto lq:on ctrs:R use:transitive, Once. Qed.
 
 End OExps.
-
-
 
 Lemma factorization Γ a c A :
   Γ ⊢ a ▻η c ∈ A ->
@@ -2058,11 +2089,38 @@ Proof.
   - hauto lq:on ctrs:IExp.R, OExps.R use:IExp.ToEPar, WtExp_embed db:wt, eexp.
   - hauto lq:on ctrs:IExp.R, OExps.R use:IExp.ToEPar, WtExp_embed db:wt, eexp.
   - move => Γ a b A A' i B B' hA [A'' [ihA0 ihA1]] hB [B'' [ihB0 ihB1]] ha [a' [iha0 iha1]].
+    have hS : Γ ⊢ Pi A B ▻ Pi A' B' ∈ Univ i
+      by hauto lq:on use:WtExp_embed db:wt.
     exists a'. split => //.
     apply : OExps.StepR; eauto.
     apply : OExp.O_Eta; eauto. hauto q:on use:WtExp_embed, wr_rh_refl.
-    admit.
-    admit.
-    admit.
+    apply WtExp_embed in hA, hB.
+    move  :hA hB. clear. hauto lq:on rew:off use:wr_rh_refl, Ctx_step.
+    apply : WR_Red; eauto. hauto l:on use:OExps.regularity.
+    by eauto with wt.
   - hauto lq:on ctrs:IExp.R, OExps.R use:IExp.ToEPar, WtExp_embed db:wt, eexp.
-Admitted.
+Qed.
+
+Lemma merge Γ a b c A :
+  Γ ⊢ a ▻η b ∈ A -> OExp.R Γ b c A -> Γ ⊢ a ▻η c ∈ A.
+Proof.
+  move => /[swap]. elim/OExp.inv=>//=_.
+  move => a0 A0 i B U hA hB hb e ? ? ? h. subst.
+  apply : WE_Conv; eauto.
+  econstructor; eauto using η_lh_refl, Equiv_sym with eexp.
+Qed.
+
+Lemma merge' Γ a b c A :
+  Γ ⊢ a ▻η b ∈ A -> OExps.R Γ b c A -> Γ ⊢ a ▻η c ∈ A.
+Proof.
+  move => + h. move : a. elim : b c A / h; eauto using merge.
+Qed.
+
+Lemma η_diamond : forall Γ M N A P B, Γ ⊢ M ▻η N ∈ A -> Γ ⊢ M ▻η P ∈ B -> exists Q, Γ ⊢ N ▻η Q ∈ B /\ Γ ⊢ P ▻η Q ∈ A.
+Proof.
+  move => Γ M N A + + h.
+  elim : Γ M N A / h.
+  - move => Γ i A hΓ hi P B h.
+    exists P. split=>//.
+    have h2 : Γ ⊢ var_tm i  ∈ A by eauto with wt.
+    apply : ηexchange.
