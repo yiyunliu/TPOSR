@@ -2347,8 +2347,8 @@ Proof.
     have hA' : Γ ⊢ A ▻ A' ∈ Univ i by sfirstorder use:WtExp_embed.
     have h0' : Γ ⊢ A ▻ A'0 ∈ Univ i0 by sfirstorder use:WtExp_embed.
     have ? : i0 = i by sfirstorder use:unique_sorts_mutual. subst.
-    move : ihA h0 => /[apply]. move => [A''][ihA0]ihA1.
-    move : ihM h2 => /[apply]. move => [M''][ihM0]ihM1.
+    move : ihA (h0) => /[apply]. move => [A''][ihA0]ihA1.
+    move : ihM (h2) => /[apply]. move => [M''][ihM0]ihM1.
     have e0 : Γ ⊢ A ≡  A' by hauto lq:on ctrs:WtEquiv.
     have e1 : Γ ⊢ A ≡  A'0 by hauto lq:on ctrs:WtEquiv.
     have e2 : A :: Γ ⊢ B0 ≡ B by hauto lq:on use:WtExp_embed, wr_rh_refl, unique_mutual.
@@ -2358,5 +2358,11 @@ Proof.
     have {}ihM0 : A'0 :: Γ ⊢ M'0 ▻η M'' ∈ B by sauto lq:on use:ηCtx_conv, Equiv_sym.
     have hLam' : Γ ⊢ Lam A'0 M'0 ▻η Lam A'' M'' ∈ Pi A'0 B. econstructor; eauto.
     sfirstorder use:Ctx_conv_simpl, Equiv_sym.
+    have hPi0 : Γ ⊢ Pi A B ▻ Pi A' B ∈ Univ i. apply WtExp_embed.
+    econstructor; eauto using η_lh_refl.
+
+    have hPi1 : Γ ⊢ Pi A B ▻ Pi A'0 B ∈ Univ i. apply WtExp_embed.
+    econstructor; eauto using η_lh_refl.
+    (* Show that lam can have both Pi A B0 and Pi A B as its type *)
     admit.
   -
