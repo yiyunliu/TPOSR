@@ -1994,3 +1994,9 @@ Module IExp.
     (* ----------------- *)
     R Γ M N B.
 End IExp.
+
+Lemma factorization Γ a c A :
+  Γ ⊢ a ▻η c ∈ A ->
+  exists b, IExp.R Γ a b A /\ OExp.R Γ b c A.
+Proof.
+Admitted.
