@@ -2128,24 +2128,6 @@ Module IExp.
 End IExp.
 
 Module IInv.
-  (* Lemma Var_inv Γ n N T (h : Γ ⊢ var_tm n ▻β N ∈ T) : *)
-  (*   exists A, N = var_tm n /\ lookup n Γ A /\ Γ ⊢ A ≡ T . *)
-  (* Proof. *)
-  (*   move E : (var_tm n) h => M h. *)
-  (*   move : n E. *)
-  (*   elim : Γ M N T / h=>//. *)
-  (*   - hauto lq:on use:lookup_wf db:wt. *)
-  (*   - move => Γ M N A B hM ihM hE n ?. subst. *)
-  (*     spec_refl. hauto lq:on db:wt. *)
-  (* Qed. *)
-
-  (* Lemma Univ_inv Γ i N T (h : Γ ⊢ Univ i ▻β N ∈ T) : *)
-  (*   N = Univ i /\ Γ ⊢ Univ (S i) ≡ T. *)
-  (* Proof. *)
-  (*   move E : (Univ i) h => M h. *)
-  (*   move : i E. *)
-  (*   elim : Γ M N T / h=>//; try hauto lq:on rew:off db:wt. *)
-  (* Qed. *)
 
   Lemma Prod_inv Γ A B N T (h : IExp.R Γ (Pi A B) N T) :
     exists A' B' i, N = Pi A' B' /\ Γ ⊢ A ▻η A' ∈ Univ i /\ A::Γ ⊢ B ▻η B' ∈ Univ i /\ Γ ⊢ Univ i ≡ T.
@@ -2299,6 +2281,7 @@ Proof.
 Qed.
 
 (* Can I refactor this lemma to talk about eta and iexp instead *)
+(* Nope. The IH would become unusable *)
 Lemma η_diamond : forall Γ M N A P B, Γ ⊢ M ▻η N ∈ A -> Γ ⊢ M ▻η P ∈ B -> exists Q, Γ ⊢ N ▻η Q ∈ B /\ Γ ⊢ P ▻η Q ∈ A.
 Proof.
   move => Γ M N A + + h.
@@ -2439,5 +2422,37 @@ Proof.
     move => [d][hh0]hh1.
     exists d. split => //=.
     by eauto using merge', WE_Conv.
-  - admit.
-  -
+  - move => Γ a b A A' i B B' hA ihA hB ihB ha iha a' U /[dup] h {}/iha.
+    move => [c [ihc0 ihc1]].
+    have wtA' : Γ ⊢ A' ∈ Univ i by qauto l:on use:WtExp_embed, wr_rh_refl.
+    have hΓ' : ⊢ A' :: Γ by qauto l:on db:wt.
+    have e : Γ ⊢ Pi A B ≡ U
+      by qauto l:on use:WtExp_embed, wr_rh_refl, unique_mutual, lh_refl_mutual.
+    exists (Lam A' (App B' ⟨ upRen_tm_tm shift ⟩ c ⟨ shift ⟩ (var_tm var_zero))). repeat split => //.
+    apply WE_Conv with (A := Pi A' B').
+    apply : WE_Lam; eauto using η_lh_refl, wr_rh_refl, WtExp_embed.
+    apply : wr_rh_refl. apply WtExp_embed. apply : ηCtx_step; eauto using WtExp_embed.
+    eapply WE_App' with (A := ren_tm shift A). by asimpl; rewrite subst_id.
+    apply : wt_renaming_univ; eauto using wr_lh_refl, WtExp_embed.
+    apply lookup_good_renaming_shift.
+    apply : η_lh_refl.
+    apply : wt_renaming_univ; eauto using WtExp_embed, wr_rh_refl, η_lh_refl.
+    apply good_renaming_up.
+    apply lookup_good_renaming_shift.
+    econstructor. apply : wt_renaming_univ; eauto using WtExp_embed.
+    apply lookup_good_renaming_shift.
+    change (Pi _ _) with (ren_tm shift (Pi A B')).
+    apply : wt_η_renaming; eauto; cycle 1. apply lookup_good_renaming_shift.
+    apply : WE_Conv; eauto. apply /Equiv_sym /WE_Trans; eauto.
+    apply : WE_Exp; eauto. apply WtExp_embed. constructor; eauto.
+    hauto lq:on rew:off use:η_lh_refl, wr_lh_refl, WtExp_embed.
+    apply : η_lh_refl.
+    apply : WR_Exp.
+    constructor; eauto. constructor. apply : wt_renaming_univ; eauto.
+    eauto using WtExp_embed. apply lookup_good_renaming_shift.
+    apply : WE_Trans; eauto.
+    apply : WE_Exp. apply WtExp_embed. econstructor; eauto.
+    apply WE_Eta with (i := i); eauto.
+  - move => Γ M N A B hM ihM eAB M' U {}/ihM.
+    hauto lq:on db:eexp.
+Qed.
