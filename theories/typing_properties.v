@@ -2395,8 +2395,49 @@ Proof.
     exists Q. split. apply : WE_Conv; last by apply /Equiv_sym /e4.
     apply : merge'; eauto.
     done.
-  - move => Γ A i B B' M M' N N' hA hB ihA hM ihM hN ihN u T.
+  - move => Γ A i B B' M M' N N' hA hB ihB hM ihM hN ihN u T.
     move /factorization.
     move => [u' [h0 h1]].
-    admit.
-  - move => Γ a b A A'
+    move /IInv.App_inv : (h0).
+    move => [A'0][B'0][N'0][i0][h2][h3][h4][h5][M'0][h6]?. subst.
+    have eA : Γ ⊢ A'0 ≡ A
+      by qauto l:on use:WtExp_embed, unique_mutual, wr_lh_refl.
+    move : ihM (h6) => /[apply].
+    move => [M''][ihM0]ihM1.
+    have ? : i0 = i by sfirstorder use:equiv_sort_unique. subst.
+    have {}h3 : A :: Γ ⊢ B ▻η B'0 ∈ Univ i by
+      move : h3 eA; clear; sfirstorder use:Equiv_sym, ηCtx_conv.
+    move : ihB (h3) => /[apply].
+    move => [B''][ihB0]ihB1.
+    move : ihN (h4) => /[apply].
+    move => [N''][ihN0]ihN1.
+    have ePi : Γ ⊢ Pi A'0 B ≡ Pi A B by
+      move : hM h6; clear;  qauto l:on use:unique_mutual, wr_lh_refl, WtExp_embed.
+
+    have {}ihM0 : Γ ⊢ M' ▻η M'' ∈ Pi A B by sfirstorder use:WE_Conv, Equiv_sym.
+
+    have hApp0 : Γ ⊢ App B' M' N' ▻η App B'' M'' N'' ∈  B[N..].
+    apply : WE_Conv.
+    eapply WE_App with (A := A); eauto.
+    apply : ηexchange''; eauto.
+    apply : WR_Red; eauto using wr_rh_refl, WtExp_embed.
+    by constructor; eauto using WtExp_embed, Equiv_sym.
+    by apply : WE_Conv; eauto.
+    apply : WE_Exp; eauto. by apply : WR_cong_univ; eauto using WtExp_embed.
+
+    have hApp1 : Γ ⊢ App B'0 M'0 N'0 ▻η App B'' M'' N'' ∈  B[N..].
+    apply : WE_Conv.
+    apply WE_App with (A := A) (i := i); eauto.
+    apply : ηexchange''; eauto.
+    apply WR_Red with (i := i) (A := Pi A B); eauto using wr_lh_refl, WtExp_embed.
+    by constructor; eauto using WtExp_embed, Equiv_sym.
+    apply : WE_Exp; eauto. by apply : WR_cong_univ; eauto using WtExp_embed, WR_Conv.
+
+    have {h1} : OExps.R Γ (App B'0 M'0 N'0) u B[N..]
+      by sfirstorder use:OExps.Conv, Equiv_sym.
+    move : OExps.commutativity hApp1. repeat move/[apply].
+    move => [d][hh0]hh1.
+    exists d. split => //=.
+    by eauto using merge', WE_Conv.
+  - admit.
+  -
