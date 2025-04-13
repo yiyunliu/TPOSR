@@ -1713,6 +1713,20 @@ Proof.
   apply : wt_β_renaming; eauto.
 Qed.
 
+Lemma morphing_ext ρ Γ Δ a A  :
+  lookup_good_morphing ρ Γ Δ ->
+  Δ ⊢ a ▻ a ∈ A[ρ] ->
+  lookup_good_morphing (scons a ρ) (A :: Γ) Δ.
+Proof.
+  move => hρ ha.
+  move => n A0.
+  elim /lookup_inv=>//=_.
+  + move =>  ? ? ? [*]. subst.
+    asimpl. eauto using wr_lh_refl.
+  + move => i A1 ? ? + ? [*]. subst.
+    move => h. asimpl. by apply hρ.
+Qed.
+
 Lemma βmorphing2_ext ρ0 ρ1 Γ Δ a0 a1 A  :
   βmorphing2_ok ρ0 ρ1 Γ Δ ->
   Δ ⊢ a0 ▻β a1 ∈ A[ρ0] ->
@@ -2169,37 +2183,28 @@ Module IInv.
   Qed.
 
 
-  (* Lemma App_inv Γ P B Q N T (h : Γ ⊢ App B P Q ▻β N ∈ T) : *)
-  (*   exists A B' Q' i, *)
-  (*     Γ ⊢ A ▻ A ∈ Univ i /\ A::Γ ⊢ B ▻β B' ∈ Univ i /\ Γ ⊢ Q ▻β Q' ∈ A /\ *)
-  (*       Γ ⊢ B[Q..] ≡ T /\ *)
-  (*       (* App case *) *)
-  (*       ((exists P', Γ ⊢ P ▻β P' ∈ Pi A B /\ N = App B' P' Q'). *)
-  (* Proof. *)
-  (*   move E : (App B P Q) h => M h. *)
-  (*   move : B P Q E. *)
-  (*   elim : Γ M N T / h=>//. *)
-  (*   - move => Γ A i B B' M M' N N' hA hB _ hM _ hN _ >[]*. subst. *)
-  (*     exists A, B', N', i. *)
-  (*     repeat split => //. *)
-  (*     (* Factor out the first bullet *) *)
-  (*     + apply : WE_Red. *)
-  (*       have : Γ ⊢ N ▻ N ∈ A by hauto lq:on use:WtBRed_embed, lh_refl_mutual. *)
-  (*       have : A :: Γ ⊢ B ▻ B' ∈ Univ i by hauto lq:on use:WtBRed_embed, lh_refl_mutual. *)
-  (*       move : WR_cong. repeat move/[apply]. *)
-  (*       apply /(proj1 lh_refl_mutual). *)
-  (*     + sfirstorder. *)
-  (*   - move => Γ A i B M M' N N' hA hB hM _ hN _ > []*. *)
-  (*     subst. exists A, B, N', i. *)
-  (*     repeat split => //. *)
-  (*     (* Factor out the first bullet *) *)
-  (*     + sfirstorder use:β_lh_refl. *)
-  (*     + apply : equiv_morphing; eauto with wt. *)
-  (*       inversion 1; subst. simpl. asimpl. hauto lq:on use:lh_refl_mutual, WtBRed_embed. *)
-  (*       asimpl. constructor. sfirstorder use:Wt_Wf_mutual. done. sfirstorder use:Wt_Wf_mutual. *)
-  (*     + hauto lq:on. *)
-  (*   - hauto lq:on rew:off db:wt. *)
-  (* Qed. *)
+  Lemma App_inv Γ P B Q N T (h : IExp.R Γ (App B P Q) N T) :
+    exists A B' Q' i,
+      Γ ⊢ A ∈ Univ i /\ A::Γ ⊢ B ▻η B' ∈ Univ i /\ Γ ⊢ Q ▻η Q' ∈ A /\
+        Γ ⊢ B[Q..] ≡ T /\
+        (* App case *)
+        (exists P', Γ ⊢ P ▻η P' ∈ Pi A B /\ N = App B' P' Q').
+  Proof.
+    move E : (App B P Q) h => M h.
+    move : B P Q E.
+    elim : Γ M N T / h=>//.
+    - move => Γ A i B B' M M' N N' hA hB hM hN >[]*. subst.
+      exists A, B', N', i.
+      repeat split => //.
+      apply WtExp_embed in hB.
+      apply : WE_Red. apply : wt_morphing_univ; eauto using wr_lh_refl.
+      apply : morphing_ext; eauto.  rewrite /lookup_good_morphing.
+      asimpl. qauto l:on use:Wt_Wf_mutual ctrs:WtRed.
+      asimpl. hauto lq:on use:WtExp_embed, wr_lh_refl.
+      qauto l:on use:Wt_Wf_mutual.
+      exists M'. split => //.
+    - hauto lq:on ctrs:WtEquiv use:Equiv_sym.
+  Qed.
 End IInv.
 
 Module OExps.
@@ -2293,6 +2298,7 @@ Proof.
   move => + h. move : a. elim : b c A / h; eauto using merge.
 Qed.
 
+(* Can I refactor this lemma to talk about eta and iexp instead *)
 Lemma η_diamond : forall Γ M N A P B, Γ ⊢ M ▻η N ∈ A -> Γ ⊢ M ▻η P ∈ B -> exists Q, Γ ⊢ N ▻η Q ∈ B /\ Γ ⊢ P ▻η Q ∈ A.
 Proof.
   move => Γ M N A + + h.
@@ -2363,6 +2369,34 @@ Proof.
 
     have hPi1 : Γ ⊢ Pi A B ▻ Pi A'0 B ∈ Univ i. apply WtExp_embed.
     econstructor; eauto using η_lh_refl.
-    (* Show that lam can have both Pi A B0 and Pi A B as its type *)
+
+    have {}hLam : Γ ⊢ Lam A' M' ▻η Lam A'' M'' ∈ Pi A B
+      by hauto lq:on rew:off use:WE_Conv,WE_Red,WE_Exp.
+
+    have {}hLam' : Γ ⊢ Lam A'0 M'0 ▻η Lam A'' M'' ∈ Pi A B
+      by hauto lq:on rew:off use:WE_Conv,WE_Red,WE_Exp.
+
+    have wt0 : Γ ⊢ Lam A'' M'' ∈ Pi A B by
+      qauto l:on use:wr_rh_refl, WtExp_embed.
+
+    have wt1 : Γ ⊢ Lam A M ∈ Pi A B by
+      qauto l:on use:wr_lh_refl, WtExp_embed ctrs:WtRed.
+
+    have wt2 : Γ ⊢ Lam A M ▻ Lam A'0 M'0 ∈ Pi A B0
+      by hauto lq:on ctrs:WtExp use:WtExp_embed.
+    have e3 : Γ ⊢ Pi A B ≡ Pi A B0
+      by hauto lq:on rew:off use:unique_mutual, lh_refl_mutual.
+    have e4 : Γ ⊢ U ≡ Pi A B by
+      hauto lq:on rew:off use:WE_Trans, Equiv_sym.
+    have {hT1} : OExps.R Γ (Lam A'0 M'0) T (Pi A B)
+      by qauto l:on use:OExps.Conv, Equiv_sym, WE_Trans.
+    move : OExps.commutativity hLam'. repeat move/[apply].
+    move => [Q][hQ0]hQ1.
+    exists Q. split. apply : WE_Conv; last by apply /Equiv_sym /e4.
+    apply : merge'; eauto.
+    done.
+  - move => Γ A i B B' M M' N N' hA hB ihA hM ihM hN ihN u T.
+    move /factorization.
+    move => [u' [h0 h1]].
     admit.
-  -
+  - move => Γ a b A A'
