@@ -443,17 +443,12 @@ Proof.
 Qed.
 
 Lemma Univ_inv Γ i N T (h : Γ ⊢ Univ i ▻ N ∈ T) :
-  N = Univ i /\ Γ ⊢ T ≡ Univ (S i).
+  Γ ⊢ T ≡ Univ (S i).
 Proof.
   move E : (Univ i) h => M h.
   move : i E.
   elim : Γ M N T / h=>//; try hauto lq:on rew:off db:wt.
-  move => Γ a b A A' i B B' hA ihA hB ihB ha iha i0 ?. subst.
-  specialize iha with (1 := eq_refl).
-  move : iha => [? hU]. subst.
-  (* Impossible by lambda FP *)
-  admit.
-Admitted.
+Qed.
 
 Lemma Var_inv Γ n N T (h : Γ ⊢ var_tm n ▻ N ∈ T) :
   exists A, lookup n Γ A /\ Γ ⊢ T ≡ A.
@@ -468,24 +463,18 @@ Qed.
 
 
 Lemma Prod_inv Γ A B N T (h : Γ ⊢ Pi A B ▻ N ∈ T) :
-  exists A' B' i, N = Pi A' B' /\ Γ ⊢ A ▻ A' ∈ Univ i /\ A::Γ ⊢ B ▻ B' ∈ Univ i /\ Γ ⊢ T ≡ Univ i.
+  exists A' B' i, Γ ⊢ A ▻ A' ∈ Univ i /\ A::Γ ⊢ B ▻ B' ∈ Univ i /\ Γ ⊢ T ≡ Univ i.
 Proof.
   move E : (Pi A B) h => M h.
   move : A B E.
   elim : Γ M N T / h=>//.
   - hauto lq:on use:Wt_Wf_mutual db:wt.
-  - move => Γ a b A A' i B B' hA _ hB _ ha iha A0 B0 ?. subst.
-    spec_refl.
-    move : iha => [A1][B1][i0][?][ihA][ihB]hU. subst.
-    (* hU should lead to a contradiction by noconfusion *)
-    admit.
   - hauto lq:on rew:off db:wt.
   - hauto lq:on rew:off db:wt.
-Admitted.
+Qed.
 
 Lemma Lam_inv Γ A M N T (h : Γ ⊢ Lam A M ▻ N ∈ T) :
   exists A' M' B i,
-    (* N = Lam A' M' /\ *)
     Γ ⊢ A ▻ A' ∈ Univ i /\
     A::Γ ⊢ B ▻ B ∈ Univ i /\
     A::Γ ⊢ M ▻ M' ∈ B /\
@@ -672,10 +661,10 @@ Proof.
     move /Var_inv.
     hauto lq:on use:lookup_deter, Equiv_sym.
   - move => Γ i hΓ _ B.
-    move /Univ_inv => [_ hB]. eauto using Equiv_sym.
+    move /Univ_inv. eauto using Equiv_sym.
   - move => Γ i A A' B B' hA ihA hB ihB U.
     move /Prod_inv.
-    move => [A'0][B'0][j][[? ?]][hA0][hB0]hU.
+    move => [A'0][B'0][j][hA0][hB0]hU.
     eapply lh_refl_mutual in hA0, hB0. apply ihB in hB0.
     (* By injectivity of universe. Also provable through lambdaFP *)
     have ? : j = i by hauto lq:on use:Univ_Inj. subst.
@@ -872,71 +861,6 @@ Proof.
     apply WRs_One.
     apply WR_Prod=>//. sfirstorder use:lh_refl_mutual.
     apply : WRs_Conv; eauto.
-Qed.
-
-Lemma Prod_multi_inv Γ A B N T :
-  Γ ⊢ Pi A B ▻+ N ∈ T ->
-  exists A' B' i,
-    N = Pi A' B' /\ Γ ⊢ A ▻+ A' ∈ Univ i /\ A :: Γ ⊢ B ▻+ B' ∈ Univ i  /\ Γ ⊢ T ≡ Univ i.
-Proof.
-  move E : (Pi A B) => U h.
-  move : A B E. elim : Γ U N T / h.
-  - move => > h *. subst.
-    move /Prod_inv in h.
-    hauto lq:on db:wt.
-  - move => Γ M N PA A hM hN ih A0 B ?. subst.
-    move /Prod_inv : hM.
-    move =>[A'][B'][i][?][h0][h1]h2. subst.
-    specialize ih with (1 := eq_refl).
-    move : ih => [A'0][B'0][i0][?][h3][h4]h5. subst.
-    exists A'0, B'0, i. repeat split =>//.
-    apply : WRs_Trans; first by eassumption.
-    move /wr_rh_refl : h0.
-    move :h3. apply exchange_multi_step.
-    move /Ctx_step /(_ h0) in h1.
-    apply : WRs_Ctx_conv; eauto with wt.
-    apply : WRs_Trans; first by eassumption.
-    move /wr_rh_refl : h1.
-    move : h4. apply exchange_multi_step.
-Qed.
-
-(* Lemma Lam_multi_inv Γ A M N T *)
-(*   (h : Γ ⊢ Lam A M ▻+ N ∈ T) : *)
-(*   exists A' M' B i, *)
-(*     (* N = Lam A' M' /\ *) *)
-(*     Γ ⊢ A ▻+ A' ∈ Univ i /\ *)
-(*     A::Γ ⊢ B ▻ B ∈ Univ i /\ *)
-(*     A::Γ ⊢ M ▻+ M' ∈ B /\ *)
-(*     Γ ⊢ T ≡ Pi A B. *)
-(* Proof. *)
-(*   move E : (Lam A M) h => A0 h. *)
-(*   move : A M E. *)
-(*   elim : Γ A0 N T / h. *)
-(*   - move => > h *. subst. *)
-(*     move /Lam_inv in h. *)
-(*     hauto lq:on db:wt. *)
-(*   - move => Γ M N P A h0 h1 ih A0 M0 ?. subst. *)
-(*     move /Lam_inv : h0 => [A'][M'][B][i][h2][h3][h4]h9. subst. *)
-(*     specialize ih with (1 := eq_refl). *)
-(*     move : ih=>[A'0][M'0][B'][i0][?][h5][h6][h7]h8. subst. *)
-(*     exists A'0, M'0, B, i. repeat split =>//. *)
-(*     apply : WRs_Trans; eauto 2. *)
-(*     hauto lq:on rew:off use:exchange_multi_step db:wt. *)
-(*     apply : WRs_Ctx_conv; eauto 2 with wt. *)
-(*     move /Ctx_step /(_ h2) in h4. *)
-(*     hauto lq:on rew:off use:exchange_multi_step db:wt. *)
-(* Qed. *)
-
-Lemma Univ_multi_inv Γ i N T (h : Γ ⊢ Univ i ▻+ N ∈ T) :
-  N = Univ i /\ Γ ⊢ T ≡ Univ (S i).
-Proof.
-  move E : (Univ i) h => U h.
-  move : E.
-  elim : Γ U N T / h.
-  - move => > h *. subst. move/Univ_inv in h. hauto lq:on db:wt.
-  - move => Γ M N P A + h1 ih ?. subst.
-    move /Univ_inv => [?]h2. subst.
-    sfirstorder.
 Qed.
 
 Lemma regularity Γ M N A
