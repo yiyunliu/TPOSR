@@ -1724,7 +1724,96 @@ Proof.
   - qauto l:on use:βmorphing2_ok_embed', equiv_morphing db:bred.
 Qed.
 
+Definition ηmorphing2_ok ρ0 ρ1 Γ Δ :=
+  forall n A, lookup n Γ A -> Δ ⊢ ρ0 n ▻η ρ1 n ∈ A[ρ0].
 
+Lemma ηmorphing2_ren ρ0 ρ1 ξ Γ Δ Ξ :
+  ηmorphing2_ok ρ0 ρ1 Γ Δ ->
+  lookup_good_renaming ξ Δ Ξ ->
+  ⊢ Ξ ->
+  ηmorphing2_ok (funcomp (ren_tm ξ) ρ0) (funcomp (ren_tm ξ) ρ1) Γ Ξ.
+Proof.
+  rewrite /ηmorphing2_ok. move => hρ hξ hΞ n A hn.
+  rewrite /funcomp. asimpl.
+  have -> : A [funcomp (ren_tm ξ) ρ0] = A[ρ0]⟨ξ⟩ by asimpl.
+  apply : wt_η_renaming; eauto.
+Qed.
+
+Lemma ηmorphing2_ext ρ0 ρ1 Γ Δ a0 a1 A  :
+  ηmorphing2_ok ρ0 ρ1 Γ Δ ->
+  Δ ⊢ a0 ▻η a1 ∈ A[ρ0] ->
+  ηmorphing2_ok (scons a0 ρ0) (scons a1 ρ1) (A :: Γ) Δ.
+Proof.
+  move => hρ ha.
+  move => n A0.
+  elim /lookup_inv=>//=_.
+  + move =>  ? ? ? [*]. subst.
+    by asimpl.
+  + move => i A1 ? ? + ? [*]. subst.
+    move => h. asimpl. by apply hρ.
+Qed.
+
+Lemma ηmorphing2_ok_embed ρ0 ρ1 Γ Δ :
+  ηmorphing2_ok ρ0 ρ1 Γ Δ -> lookup_good_morphing2 ρ0 ρ1 Γ Δ.
+Proof. sfirstorder use:WtExp_embed. Qed.
+
+Lemma ηmorphing2_ok_embed' ρ0 ρ1 Γ Δ :
+  ηmorphing2_ok ρ0 ρ1 Γ Δ -> lookup_good_morphing ρ0 Γ Δ.
+Proof.
+  hauto lq:on use:ηmorphing2_ok_embed, lookup_good_morphing2_lh_refl.
+Qed.
+
+Lemma ηmorphing2_up ρ0 ρ1 Γ Δ A i :
+  ηmorphing2_ok ρ0 ρ1 Γ Δ ->
+  Δ ⊢ A [ρ0] ∈ Univ i ->
+  ηmorphing2_ok (up_tm_tm ρ0) (up_tm_tm ρ1) (A :: Γ) (A[ρ0] :: Δ).
+Proof.
+  move => h0 h1. asimpl.
+  apply ηmorphing2_ext. apply : ηmorphing2_ren; eauto with wt.
+  apply lookup_good_renaming_shift.
+  apply : WE_Var; eauto with wt. apply here'. by asimpl.
+Qed.
+
+
+Lemma ηmorphing2 Γ a b A ρ0 ρ1 Δ : Γ ⊢ a ▻η b ∈ A ->
+  ηmorphing2_ok ρ0 ρ1 Γ Δ -> Wf Δ -> Δ ⊢ a[ρ0] ▻η b[ρ1] ∈ A[ρ0].
+Proof.
+  move => h. move : Δ ρ0 ρ1. elim : Γ a b A /h; try solve [simpl in *; eauto with eexp].
+  - hauto lq:on use:wr_lh_refl, WtExp_embed, ηmorphing2_up db:wt,eexp.
+  - move => Γ A A' i B M M' hA ihA hB hM ihM Δ ρ0 ρ1 hρ hΔ /=.
+    have hρ0 : lookup_good_morphing ρ0 Γ Δ by hauto l:on use:ηmorphing2_ok_embed'.
+    have hA' : Δ ⊢ A[ρ0] ∈ Univ i by hauto lq:on use:wt_morphing_univ, WtExp_embed, wr_lh_refl.
+    have : ηmorphing2_ok (up_tm_tm ρ0) (up_tm_tm ρ1) (A :: Γ) (A [ρ0] :: Δ)
+      by apply : ηmorphing2_up; eauto.
+    move => /[dup] hρ' /ηmorphing2_ok_embed' hρ''.
+    apply : WE_Lam; eauto with bred.
+    apply : wt_morphing_univ; eauto using ηmorphing2_ok_embed with wt.
+    eauto with wt.
+  - move => Γ A i B B' M M' N N' hA hB ihB hM ihM hN ihN Δ ρ0 ρ1 hρ hΔ /=.
+    have hρ0 : lookup_good_morphing ρ0 Γ Δ by eauto using ηmorphing2_ok_embed'.
+    have hA' : Δ ⊢ A[ρ0] ∈ Univ i by eauto using wt_morphing_univ.
+    have hΔ' : ⊢ A[ρ0] :: Δ by eauto with wt.
+    apply : WE_App'. by asimpl. apply hA'. apply ihB; by eauto using ηmorphing2_up.
+    by eauto using ηmorphing2_up.
+    by eauto using ηmorphing2_up.
+  - move => Γ A i B M M' N N' hA hB hM ihM hN ihN Δ ρ0 ρ1 hρ hΔ /=.
+    have hρ0 : lookup_good_morphing ρ0 Γ Δ by eauto using ηmorphing2_ok_embed'.
+    admit.
+    (* have hA' : Δ ⊢ A[ρ0] ∈ Univ i by eauto using wt_morphing_univ. *)
+    (* have hΔ' : ⊢ A[ρ0] :: Δ by eauto with wt. *)
+    (* have hρ0' : lookup_good_morphing (up_tm_tm ρ0) (A :: Γ) (A [ρ0] :: Δ) by eauto using good_morphing_up. *)
+    (* apply : WE_Beta'; eauto; cycle 1. by asimpl. *)
+    (* by apply : wt_morphing_univ; eauto. *)
+    (* by apply ihM; eauto using ηmorphing2_up. *)
+    (* by asimpl. *)
+  - qauto l:on use:ηmorphing2_ok_embed', equiv_morphing db:eexp.
+Admitted.
+
+
+Lemma ηmorphing2_id Γ : ⊢ Γ -> ηmorphing2_ok ids ids Γ Γ.
+  move => hΓ. rewrite /ηmorphing2_ok.
+  asimpl. eauto with eexp.
+Qed.
 
 Lemma βmorphing2_id Γ : ⊢ Γ -> βmorphing2_ok ids ids Γ Γ.
   move => hΓ. rewrite /βmorphing2_ok.
