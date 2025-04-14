@@ -2433,7 +2433,7 @@ Proof. qauto l:on use:WtExp_embed, wr_lh_refl, wr_rh_refl. Qed.
 Lemma βregularity Γ a b A : Γ ⊢ a ▻β b ∈ A -> Γ ⊢ a ∈ A /\ Γ ⊢ b ∈ A.
 Proof. qauto l:on use:WtBRed_embed, wr_lh_refl, wr_rh_refl. Qed.
 
-#[export]Hint Resolve WE_Conv WB_Conv WR_Conv ηCtx_conv βCtx_conv Ctx_conv_simpl Equiv_sym : conv.
+#[export]Hint Resolve WE_Conv WB_Conv WR_Conv ηCtx_conv βCtx_conv Ctx_conv_simpl Equiv_sym WtExp_embed WtBRed_embed : conv.
 #[export]Hint Resolve wt_unique WtExp_embed WtBRed_embed : unique.
 
 Lemma βη_commute : forall Γ M N A P, Γ ⊢ M ▻β N ∈ A -> Γ ⊢ M ▻η P ∈ A -> exists Q, Γ ⊢ N ▻η Q ∈ A /\ Γ ⊢ P ▻β Q ∈ A.
@@ -2509,7 +2509,18 @@ Proof.
     apply WE_App with (A := A) (i := i); eauto.
     apply : WE_Conv; eauto. apply WE_Red with (i := i); eauto with unique wt.
     apply : WE_Exp. apply : WR_cong_univ; eauto with unique wt.
-  - admit.
+  - move => Γ A i B M M' N N' hA hB hM ihM hN ihN U /factorization.
+    move => [V][/IInv.App_inv + hV].
+    move => [A0][B0][N0][i0][hA0][hB0][hN0][_][Q][hQ]?. subst.
+    rename hV into hU. rename Q into V. rename hQ into hV.
+    move /factorization : hV.
+    move => [Q][/IInv.Lam_inv +]hQ1.
+    move => [A1][M1][B1][i1][?][hA1][hB1][hM1]ePi. subst.
+    rename hQ1 into hV1.
+
+    have eB : A :: Γ ⊢ B1 ≡ B by eauto with unique.
+    have {}hM1 : A :: Γ ⊢ M ▻η M1 ∈ B by eauto with conv.
+    admit.
   - move => Γ M N A B hA ihA e U hU.
     have {hU} : Γ ⊢ M ▻η U ∈ A by eauto using WE_Conv, Equiv_sym.
     move => {}/ihA. hauto l:on use:WE_Conv, WB_Conv, Equiv_sym.
