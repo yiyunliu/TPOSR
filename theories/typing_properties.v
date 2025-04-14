@@ -2513,14 +2513,30 @@ Proof.
     move => [V][/IInv.App_inv + hV].
     move => [A0][B0][N0][i0][hA0][hB0][hN0][_][Q][hQ]?. subst.
     rename hV into hU. rename Q into V. rename hQ into hV.
+    have wtLam : Γ ⊢ Lam A M ∈ Pi A B by apply WR_Lam with (A := A) (i := i) ;eauto using wr_lh_refl, WtBRed_embed.
+    have ePi : Γ ⊢ Pi A0 B ≡ Pi A B by eauto with unique.
+    have {}hV : Γ ⊢ Lam A M ▻η V ∈ Pi A B by eauto with conv.
     move /factorization : hV.
-    move => [Q][/IInv.Lam_inv +]hQ1.
-    move => [A1][M1][B1][i1][?][hA1][hB1][hM1]ePi. subst.
+    move => [Q][ +]hQ1.
+    move => h. have wtQ : Γ ⊢ Q ∈ Pi A B by hauto lq:on use:IExp.ToEPar, ηregularity.
+    move /IInv.Lam_inv : h.
+    move => [A1][M1][B1][i1][?][hA1][hB1][hM1]ePi'. subst.
     rename hQ1 into hV1.
-
     have eB : A :: Γ ⊢ B1 ≡ B by eauto with unique.
     have {}hM1 : A :: Γ ⊢ M ▻η M1 ∈ B by eauto with conv.
-    admit.
+    have eA0 : Γ ⊢ A0 ≡ A by eauto with unique.
+    have ? : i0 = i by eauto using equiv_sort_unique. subst.
+    have eA1 : Γ ⊢ A ≡ A1 by eauto using WtExp_embed with wt.
+    have ? : i1 = i by sfirstorder use:ηregularity, equiv_sort_unique. subst.
+    have {}hN0 : Γ ⊢ N ▻η N0 ∈ A by eauto with conv.
+    move : (hM1) => {}/ihM. move => [M''][ihM0]ihM1.
+    move : (hN0) => {}/ihN. move => [N''][ihN0]ihN1.
+    have : Γ ⊢ App B0 V N0 ▻β  M''[N''..] ∈ B[N..] by admit.
+    move : OExps.βcommutativity hU; repeat move/[apply].
+    move => [d [h0 h1]]. exists d. split => //.
+    apply : merge'; eauto.
+    apply WE_Conv with (A := B[N'..]). admit.
+    apply : WE_Exp; eauto. apply : WR_cong_univ; eauto with conv unique.
   - move => Γ M N A B hA ihA e U hU.
     have {hU} : Γ ⊢ M ▻η U ∈ A by eauto using WE_Conv, Equiv_sym.
     move => {}/ihA. hauto l:on use:WE_Conv, WB_Conv, Equiv_sym.
