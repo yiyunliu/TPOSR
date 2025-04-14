@@ -1796,19 +1796,15 @@ Proof.
     apply : WE_App'. by asimpl. apply hA'. apply ihB; by eauto using ηmorphing2_up.
     by eauto using ηmorphing2_up.
     by eauto using ηmorphing2_up.
-  - move => Γ A i B M M' N N' hA hB hM ihM hN ihN Δ ρ0 ρ1 hρ hΔ /=.
+  - move => Γ a b A A' i B B' hA ihA hB ihB ha iha Δ ρ0 ρ1 hρ hΔ /=.
     have hρ0 : lookup_good_morphing ρ0 Γ Δ by eauto using ηmorphing2_ok_embed'.
-    admit.
-    (* have hA' : Δ ⊢ A[ρ0] ∈ Univ i by eauto using wt_morphing_univ. *)
-    (* have hΔ' : ⊢ A[ρ0] :: Δ by eauto with wt. *)
-    (* have hρ0' : lookup_good_morphing (up_tm_tm ρ0) (A :: Γ) (A [ρ0] :: Δ) by eauto using good_morphing_up. *)
-    (* apply : WE_Beta'; eauto; cycle 1. by asimpl. *)
-    (* by apply : wt_morphing_univ; eauto. *)
-    (* by apply ihM; eauto using ηmorphing2_up. *)
-    (* by asimpl. *)
+    have hΔ' : ⊢ A[ρ0] :: Δ by eauto using WtExp_embed, wr_lh_refl with wt.
+    inversion hΔ'; subst.
+    apply : WE_Eta'; eauto; cycle 1.
+    apply ihB; eauto. by apply : ηmorphing2_up; eauto using wr_lh_refl.
+    by asimpl.
   - qauto l:on use:ηmorphing2_ok_embed', equiv_morphing db:eexp.
-Admitted.
-
+Qed.
 
 Lemma ηmorphing2_id Γ : ⊢ Γ -> ηmorphing2_ok ids ids Γ Γ.
   move => hΓ. rewrite /ηmorphing2_ok.
@@ -2623,8 +2619,11 @@ Proof.
     have : Γ ⊢ App B0 V N0 ▻β  M''[N''..] ∈ B[N..] by admit.
     move : OExps.βcommutativity hU; repeat move/[apply].
     move => [d [h0 h1]]. exists d. split => //.
+    have hΓ : ⊢ Γ by sfirstorder use:Wt_Wf_mutual.
     apply : merge'; eauto.
-    apply WE_Conv with (A := B[N'..]). admit.
+    apply WE_Conv with (A := B[N'..]).
+    apply : ηmorphing2; eauto. apply ηmorphing2_ext. by apply ηmorphing2_id.
+    by asimpl.
     apply : WE_Exp; eauto. apply : WR_cong_univ; eauto with conv unique.
   - move => Γ M N A B hA ihA e U hU.
     have {hU} : Γ ⊢ M ▻η U ∈ A by eauto using WE_Conv, Equiv_sym.
