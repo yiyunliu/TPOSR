@@ -12,6 +12,7 @@ Ltac2 spec_refl () :=
 
 Ltac spec_refl := ltac2:(Control.enter spec_refl).
 
+
 Lemma subst_id b :  subst_tm (scons (var_tm var_zero) (funcomp var_tm shift)) b = b.
   symmetry. have h : b = subst_tm var_tm b by asimpl.
   rewrite {1}h.
@@ -1256,6 +1257,7 @@ Proof.
   - hauto lq:on use:equiv_morphing, WE_Conv.
 Qed.
 
+
 Lemma renaming_to_morphing:
   forall (Γ : context) (ξ : nat -> nat) (Δ : context),
     ⊢ Δ ->
@@ -1976,7 +1978,7 @@ Module OExp.
     apply : WE_Red; eauto with wt.
   Qed.
 
-  Lemma commutativity Γ a b c A :
+  Lemma ηcommutativity Γ a b c A :
     Γ ⊢ a ▻η b ∈ A ->
     R Γ a c A ->
     exists d, R Γ b d A /\ Γ ⊢ c ▻η d ∈ A.
@@ -1999,6 +2001,33 @@ Module OExp.
     econstructor. apply : wt_renaming_univ; eauto. apply lookup_good_renaming_shift.
     change (Pi A0 ⟨ shift ⟩ B ⟨ upRen_tm_tm shift ⟩) with (ren_tm shift (Pi A0 B)).
     apply : wt_η_renaming; eauto using Equiv_sym with eexp.
+    apply lookup_good_renaming_shift.
+    constructor=>//. constructor.
+  Qed.
+
+  Lemma βcommutativity Γ a b c A :
+    Γ ⊢ a ▻β b ∈ A ->
+    R Γ a c A ->
+    exists d, R Γ b d A /\ Γ ⊢ c ▻β d ∈ A.
+  Proof.
+    move => h. elim /inv => //=_.
+    move => a0 A0 i B U hA0 hB ha e *. subst.
+    have ? : ⊢ A0 :: Γ by  sfirstorder use:Wt_Wf_mutual.
+    eexists. split. econstructor; eauto.
+    apply : WR_Conv'; eauto.
+    hauto lq:on use:WtBRed_embed, wr_rh_refl.
+    econstructor; eauto.
+    econstructor; eauto using β_lh_refl with bred.
+    have e0 : B = subst_tm (scons (var_tm var_zero) var_tm) (ren_tm (upRen_tm_tm shift) B)by asimpl; rewrite subst_id.
+    rewrite {3}e0 => {e0}.
+    apply : WB_App. apply : wt_renaming_univ. apply hA0. apply lookup_good_renaming_shift.
+    sfirstorder use:Wt_Wf_mutual.
+    change (Univ i) with (ren_tm (upRen_tm_tm shift) (Univ i)). apply : wt_β_renaming; eauto with bred.
+    sfirstorder use:β_lh_refl.
+    apply good_renaming_up. apply lookup_good_renaming_shift.
+    econstructor. apply : wt_renaming_univ; eauto. apply lookup_good_renaming_shift.
+    change (Pi A0 ⟨ shift ⟩ B ⟨ upRen_tm_tm shift ⟩) with (ren_tm shift (Pi A0 B)).
+    apply : wt_β_renaming; eauto using Equiv_sym with bred.
     apply lookup_good_renaming_shift.
     constructor=>//. constructor.
   Qed.
@@ -2144,7 +2173,7 @@ Module OExps.
   Lemma StepR Γ a b c A : R Γ a b A -> OExp.R Γ b c A -> R Γ a c A.
   Proof. hauto lq:on ctrs:R use:transitive, Once. Qed.
 
-  Lemma commutativity Γ a b c A :
+  Lemma ηcommutativity Γ a b c A :
     Γ ⊢ a ▻η b ∈ A ->
     R Γ a c A ->
     exists d, R Γ b d A /\ Γ ⊢ c ▻η d ∈ A.
@@ -2154,7 +2183,21 @@ Module OExps.
     - move => a A ha b hb. exists b.
       split. apply Refl. sfirstorder use:wr_rh_refl, WtExp_embed.
       qauto l:on use:η_lh_refl, WtExp_embed, wr_rh_refl.
-    - hauto lq:on ctrs:R use:OExp.commutativity.
+    - hauto lq:on ctrs:R use:OExp.ηcommutativity.
+  Qed.
+
+
+  Lemma βcommutativity Γ a b c A :
+    Γ ⊢ a ▻β b ∈ A ->
+    R Γ a c A ->
+    exists d, R Γ b d A /\ Γ ⊢ c ▻β d ∈ A.
+  Proof.
+    move => + h. move : b.
+    elim : a c A /h.
+    - move => a A ha b hb. exists b.
+      split. apply Refl. sfirstorder use:wr_rh_refl, WtBRed_embed.
+      qauto l:on use:wr_rh_refl.
+    - hauto lq:on ctrs:R use:OExp.βcommutativity.
   Qed.
 
 End OExps.
@@ -2245,7 +2288,7 @@ Proof.
     have wtPi0 : Γ ⊢ Pi A'0 B'0 ∈ U by hauto l:on use:OExps.regularity.
     have hU : Γ ⊢ U ≡ Univ i by move : hPi0 wtPi0; clear; hauto lq:on use:unique_mutual, WtExp_embed, lh_refl_mutual.
     have {}h1 : OExps.R Γ (Pi A'0 B'0) T (Univ i) by eauto using OExps.Conv.
-    move :  OExps.commutativity hPi0 h1; repeat move/[apply].
+    move :  OExps.ηcommutativity hPi0 h1; repeat move/[apply].
     move => [d][h0]h1.
     exists d.
     split. apply : WE_Conv; eauto.
@@ -2297,7 +2340,7 @@ Proof.
       hauto lq:on rew:off use:WE_Trans, Equiv_sym.
     have {hT1} : OExps.R Γ (Lam A'0 M'0) T (Pi A B)
       by qauto l:on use:OExps.Conv, Equiv_sym, WE_Trans.
-    move : OExps.commutativity hLam'. repeat move/[apply].
+    move : OExps.ηcommutativity hLam'. repeat move/[apply].
     move => [Q][hQ0]hQ1.
     exists Q. split. apply : WE_Conv; last by apply /Equiv_sym /e4.
     apply : merge'; eauto.
@@ -2342,7 +2385,7 @@ Proof.
 
     have {h1} : OExps.R Γ (App B'0 M'0 N'0) u B[N..]
       by sfirstorder use:OExps.Conv, Equiv_sym.
-    move : OExps.commutativity hApp1. repeat move/[apply].
+    move : OExps.ηcommutativity hApp1. repeat move/[apply].
     move => [d][hh0]hh1.
     exists d. split => //=.
     by eauto using merge', WE_Conv.
@@ -2380,3 +2423,43 @@ Proof.
   - move => Γ M N A B hM ihM eAB M' U {}/ihM.
     hauto lq:on db:eexp.
 Qed.
+
+Lemma βη_commute : forall Γ M N A P, Γ ⊢ M ▻β N ∈ A -> Γ ⊢ M ▻η P ∈ A -> exists Q, Γ ⊢ N ▻η Q ∈ A /\ Γ ⊢ P ▻β Q ∈ A.
+Proof.
+  move => Γ M N A + h.
+  elim : Γ M N A / h.
+  - hauto lq:on use:β_lh_refl,wr_rh_refl, WtExp_embed.
+  - hauto lq:on use:β_lh_refl,wr_rh_refl, WtExp_embed.
+  - move => Γ i A A' B B' hA ihA hB ihB P.
+    move /factorization => [U][hP0]hP1.
+    move /IInv.Prod_inv : hP0.
+    move => [A'0][B'0][i0][?][h0][h1]h2. subst.
+    apply Univ_Inj in h2. subst.
+    move : (h0) => {}/ihA . move => [A''][ihA0]ihA1.
+    move : h1 => {}/ihB. move => [B''][ihB0]ihB1.
+    have : Γ ⊢ Pi A'0 B'0 ▻β Pi A'' B'' ∈ Univ i.
+    constructor. by eauto.
+    by apply /βCtx_step; eauto using WtExp_embed.
+    move : OExps.βcommutativity hP1. repeat move/[apply].
+    move => [d]h. decompose [ and ] h => {h}.
+    (* Need βO_commute *)
+    exists d. split => //. apply : merge'; eauto with eexp.
+    econstructor; eauto. apply /ηCtx_step; eauto using WtBRed_embed.
+  - move => Γ A A' i B M M' hA ihA hB hM ihM U /factorization.
+    move => [V][hV0]hV1.
+    move /IInv.Lam_inv : hV0.
+    move => [A'0][M'0][B0][i0][?][h0][h1][h2]h3. subst.
+    have ? : i0 = i by admit. subst.
+    move : h0 => {}/ihA .  move => [A''][ihA0]ihA1.
+    have {h2} : A :: Γ ⊢ M ▻η M'0 ∈ B by
+      apply : ηexchange'';eauto; hauto lq:on use:wr_lh_refl, WtBRed_embed.
+    move  => {}/ihM.
+    move => [M''][ihM0]ihM1.
+    (* move : h2 => {}/ihM. *)
+    admit.
+  - admit.
+  - admit.
+  - move => Γ M N A B hA ihA e U hU.
+    have {hU} : Γ ⊢ M ▻η U ∈ A by eauto using WE_Conv, Equiv_sym.
+    move => {}/ihA. hauto l:on use:WE_Conv, WB_Conv, Equiv_sym.
+Admitted.
