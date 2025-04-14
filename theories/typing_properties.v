@@ -2524,19 +2524,19 @@ Proof. qauto l:on use:WtBRed_embed, wr_lh_refl, wr_rh_refl. Qed.
 
 Lemma OExps_AppAbs:
   forall (Γ : context) (A0 A B  N0 V M1 M'' N'' : tm),
-    Γ ⊢ A0 ≡ A ->
     OExps.R Γ (Lam A0 M1) V (Pi A B) ->
     A :: Γ ⊢ M1 ▻β M'' ∈ B -> Γ ⊢ N0 ▻β N'' ∈ A -> Γ ⊢ App B V N0 ▻β M'' [N''..] ∈ B [N0..].
 Proof.
-  move => Γ A0 A B N0 V M1 M'' N'' /[swap].
+  move => Γ A0 A B N0 V M1 M'' N''.
   move E : (Pi A B) => T.
   move E0 : (Lam A0 M1) => u hu.
   move :  A0 M1 A B N0 M'' N'' E E0.
   elim : V T / hu.
-  - move => a A ha A0 M1 A1 B N0 M'' N'' ? ? e hM0 hN0. subst.
+  - move => a A ha A0 M1 A1 B N0 M'' N'' ? ? hM0 hN0. subst.
     have [i [hA0 hB]] : exists i, Γ ⊢ A1 ∈ Univ i /\ A1 :: Γ ⊢ B ∈ Univ i by qauto l:on use:regularity, Prod_inv, wr_lh_refl.
     have [j hA1]  : exists j, Γ ⊢ A0 ∈ Univ j by hauto lq:on use:Lam_inv, wr_lh_refl.
-  have ? : j = i by sfirstorder use:equiv_sort_unique. subst.
+  (* have ? : j = i by sfirstorder use:equiv_sort_unique. subst. *)
+    move /Lam_inv : ha. move => [A'][M'][B0][i0][hA'][hB0'][hM0']e.
     apply : WB_Beta; eauto with conv.
   - move => a0 a1 a2 ? ha0 ha1 ih A0 M1 A B N0 M'' N'' ? ?. subst.
     move => eA0. spec_refl.
