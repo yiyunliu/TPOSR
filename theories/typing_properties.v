@@ -693,6 +693,9 @@ Proof.
   - done.
 Qed.
 
+Lemma wt_unique : forall Γ a b c A, Γ ⊢ a ▻ b ∈ A -> forall B, Γ ⊢ a ▻ c ∈ B -> Γ ⊢ A ≡ B.
+  hauto lq:on use:unique_mutual, lh_refl_mutual. Qed.
+
 Lemma exchange Γ a b c A0 A1 :
   Γ ⊢ a ▻ b ∈ A0 ->
   Γ ⊢ a ▻ c ∈ A1 ->
@@ -2424,6 +2427,15 @@ Proof.
     hauto lq:on db:eexp.
 Qed.
 
+Lemma ηregularity Γ a b A : Γ ⊢ a ▻η b ∈ A -> Γ ⊢ a ∈ A /\ Γ ⊢ b ∈ A.
+Proof. qauto l:on use:WtExp_embed, wr_lh_refl, wr_rh_refl. Qed.
+
+Lemma βregularity Γ a b A : Γ ⊢ a ▻β b ∈ A -> Γ ⊢ a ∈ A /\ Γ ⊢ b ∈ A.
+Proof. qauto l:on use:WtBRed_embed, wr_lh_refl, wr_rh_refl. Qed.
+
+#[export]Hint Resolve WE_Conv WB_Conv WR_Conv ηCtx_conv βCtx_conv Ctx_conv_simpl Equiv_sym : conv.
+#[export]Hint Resolve wt_unique WtExp_embed WtBRed_embed : unique.
+
 Lemma βη_commute : forall Γ M N A P, Γ ⊢ M ▻β N ∈ A -> Γ ⊢ M ▻η P ∈ A -> exists Q, Γ ⊢ N ▻η Q ∈ A /\ Γ ⊢ P ▻β Q ∈ A.
 Proof.
   move => Γ M N A + h.
@@ -2449,15 +2461,54 @@ Proof.
     move => [V][hV0]hV1.
     move /IInv.Lam_inv : hV0.
     move => [A'0][M'0][B0][i0][?][h0][h1][h2]h3. subst.
-    have ? : i0 = i by admit. subst.
-    move : h0 => {}/ihA .  move => [A''][ihA0]ihA1.
+    have [? ?] : Γ ⊢ A ∈ Univ i /\ Γ ⊢ A ∈ Univ i0 by hauto l:on use:ηregularity, βregularity.
+    have ? : i0 = i by sfirstorder use:unique_sorts_mutual. subst.
+    move : (h0) => {}/ihA .  move => [A''][ihA0]ihA1.
     have {h2} : A :: Γ ⊢ M ▻η M'0 ∈ B by
       apply : ηexchange'';eauto; hauto lq:on use:wr_lh_refl, WtBRed_embed.
     move  => {}/ihM.
     move => [M''][ihM0]ihM1.
-    (* move : h2 => {}/ihM. *)
-    admit.
-  - admit.
+    have : Γ ⊢ Lam A'0 M'0 ▻β Lam A'' M'' ∈ Pi A B.
+    apply : WB_Conv. apply : WB_Lam; eauto. apply : Ctx_step. apply hB. by eauto using WtExp_embed.
+    apply : βCtx_step. by eauto. by eauto using WtExp_embed.
+    apply : WE_Exp; by econstructor; eauto using WtExp_embed.
+    move : OExps.βcommutativity hV1. repeat move/[apply].
+    move => [d [? ?]].
+    exists d. split => //.
+    apply : merge'; eauto. apply WE_Conv with (A := Pi A' B). apply : WE_Lam; eauto.
+    apply : Ctx_step; by eauto using WtBRed_embed.
+    apply : ηCtx_step; by eauto using WtBRed_embed.
+    apply : WE_Exp. constructor; eauto using WtBRed_embed.
+  - move => Γ A i B B' M M' N N' hA hB ihB hM ihM hN ihN U /factorization.
+    move => [V][hV0]hV1.
+    move /IInv.App_inv : hV0.
+    move => [A''][B''][N''][i'][hA'][hB'][hN'][e][M''][hM']?. subst.
+    have e0 : Γ ⊢ A'' ≡ A by eauto with unique.
+    have ? : i' = i by sfirstorder use:equiv_sort_unique. subst.
+    have {}hB' : A :: Γ ⊢ B ▻η B'' ∈ Univ i by eauto with conv.
+    move : (hB') => {}/ihB. move => [B'0][ihB0]ihB1.
+    have {}hN' : Γ ⊢ N ▻η N'' ∈ A by eauto with conv.
+    move : (hN') => {}/ihN. move => [N'0][ihN0]ihN1.
+    have ePi : Γ ⊢ Pi A'' B ≡ Pi A B by eauto with unique.
+    have {}hM' : Γ ⊢ M ▻η M'' ∈ Pi A B by eauto with conv.
+    move : (hM') => {}/ihM. move => [M'0][ihM0]ihM1.
+    have : Γ ⊢ (App B'' M'' N'') ▻β (App B'0 M'0 N'0) ∈ B[N..].
+    apply WB_Conv with (A := B''[N''..]).
+    apply : WB_App. apply hA'.  by eauto with conv.
+    suff : Γ ⊢ Pi A B ≡ Pi A'' B'' by eauto with conv.
+    apply : WE_Trans; eauto using Equiv_sym.
+    apply : WE_Red.
+    constructor; by eauto using WtExp_embed with conv.
+    by eauto with conv.
+    apply : WE_Exp. apply WR_cong_univ with (A := A); eauto with conv unique.
+    move : OExps.βcommutativity hV1; repeat move/[apply].
+    move => [d][? ?].
+    exists d. split => //.
+    apply : merge'; eauto.
+    apply WE_Conv with (A := B'[N'..]).
+    apply WE_App with (A := A) (i := i); eauto.
+    apply : WE_Conv; eauto. apply WE_Red with (i := i); eauto with unique wt.
+    apply : WE_Exp. apply : WR_cong_univ; eauto with unique wt.
   - admit.
   - move => Γ M N A B hA ihA e U hU.
     have {hU} : Γ ⊢ M ▻η U ∈ A by eauto using WE_Conv, Equiv_sym.
